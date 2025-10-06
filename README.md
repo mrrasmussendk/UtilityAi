@@ -12,7 +12,7 @@ Instead of relying on static workflows, this orchestrator continuously **evaluat
 | Concept | Description |
 |----------|-------------|
 | **Sensors** | Monitor environment conditions like cost, recency, latency, and uncertainty. |
-| **Agents** | Perform concrete actions such as search, summarization, verification, transcription, or text-to-speech. |
+| **Actions** | Perform concrete actions such as search, summarization, verification, transcription, or text-to-speech. |
 | **Policy** | Computes utility scores for each agent and selects the best one based on current context. |
 | **Reward Function** | Evaluates outcomes and adjusts weights — enabling learning without retraining. |
 | **Blackboard** | Shared memory where all modules write and read context data. |
