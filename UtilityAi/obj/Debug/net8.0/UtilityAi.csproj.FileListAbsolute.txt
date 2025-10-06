@@ -1,0 +1,12 @@
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\bin\Debug\net8.0\UtilityAi.deps.json
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\bin\Debug\net8.0\UtilityAi.dll
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\bin\Debug\net8.0\UtilityAi.pdb
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\UtilityAi.csproj.AssemblyReference.cache
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\UtilityAi.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\UtilityAi.AssemblyInfoInputs.cache
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\UtilityAi.AssemblyInfo.cs
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\UtilityAi.csproj.CoreCompileInputs.cache
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\UtilityAi.dll
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\refint\UtilityAi.dll
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\UtilityAi.pdb
+C:\Users\User\RiderProjects\UtilityAi\UtilityAi\obj\Debug\net8.0\ref\UtilityAi.dll
