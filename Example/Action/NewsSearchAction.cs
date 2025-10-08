@@ -1,48 +1,122 @@
 ﻿using System.Text;
+using Example.Action.Considerations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UtilityAi.Actions;
+using UtilityAi.Consideration;
 using UtilityAi.Utils;
 
 namespace Example.Action;
 
-
 public sealed class NewsSearchAction : IAction
 {
-      private readonly HttpClient _http;
+    private const string UserAgent = "UtilityAi/1.0";
+
+    private readonly HttpClient _http;
     private readonly string _apiKey;
+
+    private List<IConsideration> _considerations = new List<IConsideration>();
 
     // You can inject HttpClient via DI; it should have a sane Timeout set.
     public NewsSearchAction(HttpClient http, string? apiKey = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _apiKey = apiKey ?? Environment.GetEnvironmentVariable("NEWSAPI_KEY") ?? "";
+        _considerations = new List<IConsideration>()
+        {
+            new HasValueConsideration("answer:text", true),
+            new HasValueConsideration("search:results", true),
+            new HasValueConsideration("context:topic")
+        };
         if (string.IsNullOrWhiteSpace(_apiKey))
             throw new InvalidOperationException("NEWSAPI_KEY not set.");
     }
 
     public string Id => "news_search";
 
-    // Keep it permissive; safety is handled by sensors/gates elsewhere.
-    public bool Gate(IBlackboard bb) => bb.GetOr("risk:safety", 0.0) < 0.7;
+    public bool Gate(IBlackboard bb)
+    {
+        var safety = bb.GetOr("risk:safety", 0.0);
+        return safety < 0.70; // True if below threshold
+    }
 
     public async Task<AgentOutcome> ActAsync(IBlackboard bb, CancellationToken ct)
     {
-        var t0 = DateTimeOffset.UtcNow;
+        var startedAt = DateTimeOffset.UtcNow;
+        var now = DateTimeOffset.UtcNow;
 
-        // Derive intent
-        var locale     = bb.GetOr("context:locale", "en-US");
-        var language   = ToNewsApiLanguage(locale);   // e.g., "en"
-        var topic      = bb.GetOr("context:topic", "technology");
-        var pageSize   = Math.Clamp(bb.GetOr("search:k", 6), 3, 20);
-        var recency    = bb.GetOr("signal:recency", 0.0); // 0..1
-        var fromDate   = recency >= 0.75 ? DateTime.UtcNow.AddDays(-1)
-                        : recency >= 0.4 ? DateTime.UtcNow.AddDays(-3)
-                        : DateTime.UtcNow.AddDays(-14);
+        // 1) Derive intent
+        var locale = bb.GetOr("context:locale", "en-US");
+        var language = ToNewsApiLanguage(locale); // e.g., "en"
+        var topic = bb.GetOr("context:topic", "technology");
+        var pageSize = Math.Clamp(bb.GetOr("search:k", 6), 3, 20);
+        var recency = bb.GetOr("signal:recency", 0.0); // 0..1
+        var fromDate = DetermineFromDate(recency);
 
-        // Build URL (Everything endpoint: query + sort by recency)
-        // Docs: https://newsapi.org/docs/endpoints/everything
-        var url = new StringBuilder("https://newsapi.org/v2/everything?")
+        // 2) Build request URL
+        var url = BuildEverythingUrl(topic, language, pageSize, fromDate);
+
+        // 3) Execute HTTP request
+        string body;
+        int statusCode;
+        try
+        {
+            (body, statusCode) = await FetchAsync(url, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // Respect cancellation without marking as an error on the blackboard
+            return new AgentOutcome(false, 0.0, DateTimeOffset.UtcNow - startedAt);
+        }
+        catch (Exception)
+        {
+            // Network/parse issues should not crash the agent; surface a generic error
+            bb.Set("search:error", "NEWSAPI_EXCEPTION");
+            return new AgentOutcome(false, 0.0, DateTimeOffset.UtcNow - startedAt);
+        }
+
+        if (statusCode < 200 || statusCode >= 300)
+        {
+            bb.Set("search:error", $"NEWSAPI_{statusCode}");
+            return new AgentOutcome(false, 0.0, DateTimeOffset.UtcNow - startedAt);
+        }
+
+        // 4) Parse and normalize
+        if (!TryParseStatusAndArticles(body, pageSize, now, out var items, out var error))
+        {
+            bb.Set("search:error", error ?? "NEWSAPI_STATUS:error");
+            return new AgentOutcome(false, 0.0, DateTimeOffset.UtcNow - startedAt);
+        }
+
+        // 5) Write results to blackboard
+        var serialized = JsonConvert.SerializeObject(items);
+        bb.Set("search:results", serialized);
+        bb.Set("search:count", items.Count);
+        bb.Set("search:source", "newsapi");
+
+        // 6) Freshness evidence
+        var freshness = ComputeFreshness(items, now);
+        bb.Set("evidence:freshness", Math.Clamp(freshness, 0, 1));
+
+        // 7) Outcome: assign a small notional cost for accounting
+        var latency = DateTimeOffset.UtcNow - startedAt;
+        return new AgentOutcome(items.Count > 0, 0.01, latency);
+    }
+
+    public double Score(IBlackboard bb)
+    {
+        if (!Gate(bb)) return 0.0;
+        return Scoring.AggregateWithMakeup(_considerations, bb);
+    }
+
+    private static DateTime DetermineFromDate(double recency)
+        => recency >= 0.75 ? DateTime.UtcNow.AddDays(-1)
+            : recency >= 0.4 ? DateTime.UtcNow.AddDays(-3)
+            : DateTime.UtcNow.AddDays(-14);
+
+    private string BuildEverythingUrl(string topic, string language, int pageSize, DateTime fromDate)
+    {
+        return new StringBuilder("https://newsapi.org/v2/everything?")
             .Append("q=").Append(Uri.EscapeDataString(topic))
             .Append("&sortBy=publishedAt")
             .Append("&pageSize=").Append(pageSize)
@@ -50,59 +124,71 @@ public sealed class NewsSearchAction : IAction
             .Append("&from=").Append(Uri.EscapeDataString(fromDate.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'")))
             .Append("&apiKey=").Append(_apiKey)
             .ToString();
+    }
 
+    private async Task<(string Body, int StatusCode)> FetchAsync(string url, CancellationToken ct)
+    {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
-        req.Headers.Add("user-agent", "UtilityAi/1.0");
-        using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-        var body = await resp.Content.ReadAsStringAsync(ct);
+        // Use TryAddWithoutValidation to avoid rare header validation issues on some platforms
+        req.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
+        // Buffer the response content to ensure it's fully available when we read it
+        using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseContentRead, ct).ConfigureAwait(false);
+        var content = resp.Content;
+        var body = content is null ? string.Empty : await content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        return (body, (int) resp.StatusCode);
+    }
 
-        if (!resp.IsSuccessStatusCode)
-        {
-            // Write a minimal error for observability; return a failed outcome (no throw inside agent)
-            bb.Set("search:error", $"NEWSAPI_{(int)resp.StatusCode}");
-            return new AgentOutcome(false, 0.0, DateTimeOffset.UtcNow - t0);
-        }
+    private static bool TryParseStatusAndArticles(string body, int pageSize, DateTimeOffset now,
+        out List<NewsItem> items, out string? error)
+    {
+        items = new List<NewsItem>();
+        error = null;
 
-        // Parse JSON
         var root = JObject.Parse(body);
         var status = root["status"]?.Value<string>() ?? "error";
         if (!string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase))
         {
-            bb.Set("search:error", $"NEWSAPI_STATUS:{status}");
-            return new AgentOutcome(false, 0.0, DateTimeOffset.UtcNow - t0);
+            error = $"NEWSAPI_STATUS:{status}";
+            return false;
         }
 
-        var articles = (JArray?)root["articles"] ?? new JArray();
-        var now = DateTimeOffset.UtcNow;
+        var articles = (JArray?) root["articles"] ?? new JArray();
 
-        // Normalize to your BB items (title/url/publishedAt). You can add source.host if needed.
-        var items = articles.Take(pageSize).Select(a => new
+        items = articles
+            .Take(pageSize)
+            .Select(a => new NewsItem(
+                title: a["title"]?.Value<string>() ?? "(untitled)",
+                url: a["url"]?.Value<string>() ?? string.Empty,
+                publishedAt: ParseIso8601(a["publishedAt"]?.Value<string>()) ?? now
+            ))
+            .Where(i => !string.IsNullOrWhiteSpace(i.url))
+            .ToList();
+
+        return true;
+    }
+
+    private static double ComputeFreshness(IReadOnlyCollection<NewsItem> items, DateTimeOffset now)
+    {
+        if (items.Count == 0) return 0.0;
+        return items.Average(i =>
         {
-            title       = a["title"]?.Value<string>() ?? "(untitled)",
-            url         = a["url"]?.Value<string>() ?? "",
-            publishedAt = ParseIso8601(a["publishedAt"]?.Value<string>()) ?? now
-        })
-        .Where(i => !string.IsNullOrWhiteSpace(i.url))
-        .ToList();
+            var ageHours = (now - i.publishedAt).TotalHours;
+            return ageHours <= 1 ? 1.0 : ageHours <= 24 ? 0.8 : ageHours <= 168 ? 0.6 : 0.4;
+        });
+    }
 
-        var it = JsonConvert.SerializeObject(items);
-        // Write into BB
-        bb.Set("search:results", it);
-        bb.Set("search:count", items.Count);
-        bb.Set("search:source", "newsapi");
+    private sealed class NewsItem
+    {
+        public string title { get; }
+        public string url { get; }
+        public DateTimeOffset publishedAt { get; }
 
-        // Light freshness heuristic → can inform downstream “freshness” if you like
-        var freshness = items.Count == 0 ? 0.0 :
-            items.Average(i =>
-            {
-                var ageHours = (now - i.publishedAt).TotalHours;
-                return ageHours <= 1 ? 1.0 : ageHours <= 24 ? 0.8 : ageHours <= 168 ? 0.6 : 0.4;
-            });
-        bb.Set("evidence:freshness", Math.Clamp(freshness, 0, 1));
-
-        // Outcome: assign a small notional cost for accounting
-        var latency = DateTimeOffset.UtcNow - t0;
-        return new AgentOutcome(items.Count > 0, 0.01, latency);
+        public NewsItem(string title, string url, DateTimeOffset publishedAt)
+        {
+            this.title = title;
+            this.url = url;
+            this.publishedAt = publishedAt;
+        }
     }
 
     private static DateTimeOffset? ParseIso8601(string? s)

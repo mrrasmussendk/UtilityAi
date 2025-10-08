@@ -43,4 +43,5 @@ public sealed class VerifierAction : IAction
         var latency = DateTimeOffset.UtcNow - t0;
         return new AgentOutcome(true, 0.03, latency);
     }
+    public double Score(IBlackboard bb) => bb.GetOr("answer:verifier_score", 0.0);
 }

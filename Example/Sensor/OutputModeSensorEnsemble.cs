@@ -7,28 +7,42 @@ using UtilityAi.Utils;
 
 namespace Example.Sensor;
 
-
 [Experimental("OPENAI001")]
 public sealed class OutputModeSensorEnsemble : ISensor
 {
     // Simple robust detector: keyword lexicon + fallback LLM (optional)
     private readonly OpenAiClient? _client;
     private readonly string _model;
-    public OutputModeSensorEnsemble(OpenAiClient? client = null, string model = "gpt-5")
-    { _client = client; _model = model; }
+
+    public OutputModeSensorEnsemble(OpenAiClient? client = null, string model = "gpt-5-mini")
+    {
+        _client = client;
+        _model = model;
+    }
 
     public async Task SenseAsync(IBlackboard bb, CancellationToken ct)
     {
+        if (bb.Has("task:output_mode")) return;
+        
         var prompt = (bb.GetOr("prompt", "") ?? "");
         var text = prompt.ToLowerInvariant();
-
         // A) Heuristic lexicon
-        var audioLex = new[] { "podcast", "voice", "read it out", "sound", "audio", "narrate", "listen", "radio" };
-        var textLex = new[] { "write", "article", "transcript", "summary", "report" };
+        var audioLex = new[] {"podcast", "voice", "read it out", "sound", "audio", "narrate", "listen", "radio"};
+        var textLex = new[] {"write", "article", "transcript", "summary", "report"};
+        var remote = new[] {"sms"};
         double audioHit = audioLex.Any(text.Contains) ? 0.9 : 0.0;
         double textHit = textLex.Any(text.Contains) ? 0.7 : 0.0;
+        double remoteHit = remote.Any(text.Contains) ? 1 : 0.0;
+        string mode = "text";
+        if (remoteHit > 0)
+        {
+            mode = "sms";
+        }
+        else
+        {
+            mode = audioHit > 0 && audioHit >= textHit ? "audio" : "text";
+        }
 
-        string mode = audioHit >0  && audioHit >= textHit ? "audio" : "text";
         double conf = Math.Max(audioHit, textHit);
 
         // B) Optional LLM backstop for ambiguous phrasing
@@ -37,7 +51,7 @@ public sealed class OutputModeSensorEnsemble : ISensor
             var schema = JObject.Parse(@"
             { ""type"":""object"",
               ""properties"": {
-                 ""output_mode"": { ""type"":""string"", ""enum"": [""text"",""audio"",""both""] },
+                 ""output_mode"": { ""type"":""string"", ""enum"": [""text"",""audio"",""both"", ""sms""] },
                  ""confidence"": { ""type"":""number"", ""minimum"":0, ""maximum"":1 }
               },
               ""required"": [""output_mode"", ""confidence""],

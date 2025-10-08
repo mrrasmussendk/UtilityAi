@@ -1,4 +1,5 @@
 ﻿using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 using System.Text;
@@ -6,6 +7,7 @@ using System.Text.Json;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using OpenAI.Responses;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Example.Openai;
 
@@ -14,9 +16,10 @@ public sealed class OpenAiClient
     private readonly HttpClient _http;
     private readonly string _apiKey;
 
-    public OpenAiClient(string apiKey)
-    {
-        _apiKey = apiKey ?? "";
+    public OpenAiClient()
+    { 
+        _apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+               ?? throw new InvalidOperationException("OPENAI_API_KEY not set.");
         _http = new HttpClient {BaseAddress = new Uri("https://api.openai.com/")};
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -31,10 +34,8 @@ public sealed class OpenAiClient
         string model,
         CancellationToken ct)
     {
-        // Create the SDK Responses client (pull API key from env or your secret store)
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-                     ?? throw new InvalidOperationException("OPENAI_API_KEY not set.");
-        var client = new OpenAIResponseClient(model, apiKey);
+        
+        var client = new OpenAIResponseClient(model, _apiKey);
 
         // Local helper to safely embed strings in raw JSON
         static string J(string s) => JsonConvert.ToString(s ?? string.Empty);
@@ -109,48 +110,100 @@ public sealed class OpenAiClient
     }
 
 
+    [Experimental("OPENAI001")]
     public async Task<string> TextAsync(string system, string user, string model, CancellationToken ct)
     {
-        // Non-structured text — simpler payload
+        // Non-structured text — use Responses API with input_text parts
         var payload = new
         {
             model = model,
             input = new object[]
             {
-                new {role = "system", content = system},
-                new {role = "user", content = user}
+                new { role = "system", content = new object[] { new { type = "input_text", text = system } } },
+                new { role = "user",   content = new object[] { new { type = "input_text", text = user } } }
             }
         };
-        var json = JsonConvert.SerializeObject(payload);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        using var resp = await _http.PostAsync("v1/responses", content, ct);
-        var body = await resp.Content.ReadAsStringAsync(ct);
-        if (!resp.IsSuccessStatusCode) throw new Exception($"OPENAI_HTTP_{(int) resp.StatusCode}: {body}");
-        var root = JObject.Parse(body);
+        var client = new OpenAIResponseClient(model, _apiKey);
 
-        // 1) Try the convenience field if present on some responses
-        var text = (string?) root["output_text"];
-        if (!string.IsNullOrWhiteSpace(text)) return text!;
+        // Prepare serialized payload once; we will recreate content per attempt
+        var jsonPayload = JsonConvert.SerializeObject(payload);
 
-        // 2) Parse the structured output: pick message -> output_text blocks
-        var blocks = root["output"]?
-            .Children<JObject>()
-            .Where(o => (string?) o["type"] == "message")
-            .SelectMany(o => o["content"]!.Children<JObject>())
-            .Where(c => (string?) c["type"] == "output_text")
-            .Select(c => (string?) c["text"])
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .ToList();
+        const int MaxAttempts = 3;
+        var delay = TimeSpan.FromMilliseconds(250);
 
-        if (blocks is {Count: > 0})
-            return string.Concat(blocks!); // join all text parts
+        for (int attempt = 1; attempt <= MaxAttempts; attempt++)
+        {
+            try
+            {
+                using var content = BinaryContent.Create(BinaryData.FromString(jsonPayload));
+                var result = await client.CreateResponseAsync(
+                    content,
+                    new RequestOptions { CancellationToken = ct }
+                ).ConfigureAwait(false);
 
-        // 3) Fallbacks (if provider returns a single message-like shape)
-        text = (string?) root.SelectToken("$.output[?(@.type=='message')].content[0].text")
-               ?? (string?) root.SelectToken("$.message.content[0].text");
+                // Read raw JSON so we can prefer `output_text`, else stitch from message parts
+                var raw = result.GetRawResponse().Content.ToString();
+                using var doc = JsonDocument.Parse(raw);
 
-        if (!string.IsNullOrWhiteSpace(text)) return text!;
+                string? outputText =
+                    doc.RootElement.TryGetProperty("output_text", out var ot) && ot.ValueKind == JsonValueKind.String
+                        ? ot.GetString()
+                        : null;
 
-        throw new Exception("OPENAI_EMPTY_TEXT");
+                if (string.IsNullOrWhiteSpace(outputText) &&
+                    doc.RootElement.TryGetProperty("output", out var output) &&
+                    output.ValueKind == JsonValueKind.Array)
+                {
+                    var sb = new StringBuilder();
+                    foreach (var item in output.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("type", out var t) && t.GetString() == "message" &&
+                            item.TryGetProperty("content", out var c) && c.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var part in c.EnumerateArray())
+                            {
+                                if (part.TryGetProperty("text", out var txt) && txt.ValueKind == JsonValueKind.String)
+                                    sb.AppendLine(txt.GetString());
+                            }
+                        }
+                    }
+
+                    outputText = sb.ToString().Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(outputText))
+                    throw new Exception("OPENAI_EMPTY_TEXT");
+
+                // The model returns a single JSON string conforming to your schema
+                return outputText!;
+            }
+            catch (TaskCanceledException ex) when (ct.IsCancellationRequested)
+            {
+                // Respect external cancellation
+                throw new OperationCanceledException("The OpenAI request was canceled.", ex, ct);
+            }
+            catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Treat as transient timeout; retry with backoff
+                if (attempt == MaxAttempts) throw;
+                await Task.Delay(delay).ConfigureAwait(false);
+                delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2);
+            }
+            catch (HttpRequestException) when (!ct.IsCancellationRequested)
+            {
+                if (attempt == MaxAttempts) throw;
+                await Task.Delay(delay).ConfigureAwait(false);
+                delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2);
+            }
+            catch (IOException) when (!ct.IsCancellationRequested)
+            {
+                if (attempt == MaxAttempts) throw;
+                await Task.Delay(delay).ConfigureAwait(false);
+                delay = TimeSpan.FromMilliseconds(delay.TotalMilliseconds * 2);
+            }
+        }
+
+        // Should not reach here
+        throw new Exception("OPENAI_UNREACHABLE");
     }
 }

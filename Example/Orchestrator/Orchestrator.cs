@@ -10,12 +10,12 @@ public static class FeatureVector
 {
     public static IReadOnlyDictionary<string, double> From(IBlackboard bb) => new Dictionary<string, double>
     {
-        ["recency"]     = bb.GetOr("signal:recency", 0.0),
+        ["recency"] = bb.GetOr("signal:recency", 0.0),
         ["uncertainty"] = bb.GetOr("signal:uncertainty", 0.5),
-        ["safety"]      = bb.GetOr("risk:safety", 0.0),
-        ["budget"]      = bb.GetOr("budget:left", 1.0),
-        ["sla"]         = bb.GetOr("sla:tight", 0.0),
-        ["outmode_conf"]= bb.GetOr("signal:output_mode_conf", 0.7)
+        ["safety"] = bb.GetOr("risk:safety", 0.0),
+        ["budget"] = bb.GetOr("budget:left", 1.0),
+        ["sla"] = bb.GetOr("sla:tight", 0.0),
+        ["outmode_conf"] = bb.GetOr("signal:output_mode_conf", 0.7)
     };
 }
 
@@ -40,15 +40,14 @@ public sealed class Orchestrator : IOrchestrator
 
         var steps = new List<DecisionStep>(capacity: 16);
 
-        var maxTicks   = bb.GetOr("orchestrator:max_ticks", 8);
-        var ticks      = 0;
+        var maxTicks = bb.GetOr("orchestrator:max_ticks", 8);
+        var ticks = 0;
         var stagnation = 0;
-        var lastHash   = Hash(bb.Snapshot());
+        var lastHash = Hash(bb.Snapshot());
         string doneReason = "done:max_ticks"; // default if loop exits by ticks
 
         while (ticks < maxTicks)
         {
-            ct.ThrowIfCancellationRequested();
             ticks++;
 
             // 1) Sense
@@ -58,12 +57,15 @@ public sealed class Orchestrator : IOrchestrator
             var x = FeatureVector.From(bb);
 
             // 3) Candidates
-            var candidates = _agents.Where(a => a.Gate(bb)).ToList();
-            if (candidates.Count == 0) { doneReason = "done:no_candidates"; break; }
+            var candidates = _agents.Where(a => a.Score(bb) > 0.0).ToList();
+            if (candidates.Count == 0)
+            {
+                doneReason = "done:no_candidates";
+                break;
+            }
 
             // 4) Choose
-            var chosenId = _policy.Choose(bb, candidates, x);
-            var chosen   = candidates.First(a => a.Id == chosenId);
+            var chosen = candidates.OrderBy(action => action.Score(bb)).First();
 
             // Bookkeeping
             bb.Set($"agent:{chosen.Id}:count", bb.GetOr($"agent:{chosen.Id}:count", 0) + 1);
@@ -79,7 +81,7 @@ public sealed class Orchestrator : IOrchestrator
             // Telemetry (EWMA)
             Ewma(bb, $"agent:{chosen.Id}:ewma_success", outcome.Success ? 1 : 0);
             Ewma(bb, $"agent:{chosen.Id}:ewma_latency", latency.TotalSeconds, baseVal: 1.0);
-            Ewma(bb, $"agent:{chosen.Id}:ewma_cost",    outcome.Cost,        baseVal: 0.0);
+            Ewma(bb, $"agent:{chosen.Id}:ewma_cost", outcome.Cost, baseVal: 0.0);
 
             // 6) Reward & Learn
             var r = _reward.Score(bb, chosen.Id, outcome);
@@ -97,7 +99,7 @@ public sealed class Orchestrator : IOrchestrator
             // Stagnation guard
             var newHash = Hash(bb.Snapshot());
             stagnation = newHash == lastHash ? stagnation + 1 : 0;
-            lastHash   = newHash;
+            lastHash = newHash;
             if (stagnation >= 2)
             {
                 bb.Set("orchestrator:done_reason", "done:stagnation");
@@ -126,6 +128,7 @@ public sealed class Orchestrator : IOrchestrator
 
     protected bool IsDone(IBlackboard bb)
     {
+        if(bb.Has("done")) return true;
         var mode = bb.GetOr("task:output_mode", "text");
         var sources = bb.GetOr("search:count", 0);
         var quality = bb.GetOr("answer:verifier_score", 0.0);
@@ -133,18 +136,37 @@ public sealed class Orchestrator : IOrchestrator
         var hasText = bb.Has("answer:text");
 
         if ((mode is "audio" or "both") && hasAudio && quality >= 0.6 && sources >= 3)
-        { bb.Set("orchestrator:done_reason", "done:success"); return true; }
+        {
+            bb.Set("orchestrator:done_reason", "done:success");
+            return true;
+        }
 
         if ((mode is "text" or "both") && hasText && quality >= 0.6 && sources >= 3)
-        { bb.Set("orchestrator:done_reason", "done:success"); return true; }
+        {
+            bb.Set("orchestrator:done_reason", "done:success");
+            return true;
+        }
 
         // budget / sla guards (optional)
         var ticks = bb.GetOr("orchestrator:ticks", 0) + 1;
         bb.Set("orchestrator:ticks", ticks);
-        if (ticks >= bb.GetOr("orchestrator:max_ticks", 8)) { bb.Set("orchestrator:done_reason", "done:max_ticks"); return true; }
+        if (ticks >= bb.GetOr("orchestrator:max_ticks", 8))
+        {
+            bb.Set("orchestrator:done_reason", "done:max_ticks");
+            return true;
+        }
 
-        if (bb.GetOr("budget:left", 0.2) <= 0.05) { bb.Set("orchestrator:done_reason", "done:budget"); return true; }
-        if (bb.GetOr("sla:tight", 0.0) >= 0.95) { bb.Set("orchestrator:done_reason", "done:sla"); return true; }
+        if (bb.GetOr("budget:left", 0.2) <= 0.05)
+        {
+            bb.Set("orchestrator:done_reason", "done:budget");
+            return true;
+        }
+
+        if (bb.GetOr("sla:tight", 0.0) >= 0.95)
+        {
+            bb.Set("orchestrator:done_reason", "done:sla");
+            return true;
+        }
 
         return false;
     }

@@ -16,4 +16,9 @@ public class GeneralTextOutputAction : IAction
     {
         throw new NotImplementedException();
     }
+
+    public double Score(IBlackboard bb)
+    {
+        throw new NotImplementedException();
+    }
 }

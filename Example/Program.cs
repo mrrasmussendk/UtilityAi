@@ -9,17 +9,17 @@ using UtilityAi.Policies;
 using UtilityAi.Sensor;
 using UtilityAi.Utils;
 
-var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
 var bb = new Blackboard();
-bb.Set("prompt", "Get the latest tech news");
+bb.Set("prompt", "send me an sms with the latest tech news");
 bb.Set("context:locale", "en-US");
 bb.Set("orchestrator:max_ticks", 8);
 
 var http = new HttpClient {Timeout = TimeSpan.FromSeconds(60)};
-var openai = new OpenAiClient(apiKey);
+var openai = new OpenAiClient();
 
 var sensors = new ISensor[]
 {
+    new TopicSensor(openai),
     new RecencySensor(),
 #pragma warning disable OPENAI001
     new OutputModeSensorEnsemble(openai),
@@ -38,6 +38,7 @@ var agents = new IAction[]
 #pragma warning restore OPENAI001
     new TtsNaturalAction(), // stubbed TTS
     new TtsFastAction(), // stubbed TTS
+    new TwilloOutputAction()
 };
 
 var policy = new LinearEpsilonGreedyPolicy();
