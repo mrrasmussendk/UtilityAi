@@ -1,0 +1,66 @@
+﻿@startuml UtilityAi_Architecture
+' High-level component view of Utility-AI Orchestrator and Example wiring
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultTextAlignment center
+skinparam ArrowColor #555555
+skinparam componentBorderColor #333333
+skinparam packageBorderColor #333333
+skinparam packageTitleFontStyle bold
+
+package "UtilityAi (Core)" as CORE {
+  interface ISensor
+  interface ICapabilityModule
+  interface IAction
+  interface IConsideration
+
+  component EventBus
+  component Runtime
+  component Proposal
+  component UtilityAiOrchestrator
+  component UserIntent
+}
+
+package "Example" as EX {
+  component TopicSensor
+  component SearchAndSummarizeModule
+  component NewsSearchAction
+  component SummarizerAction
+  component OutputModule
+  component TwilloOutputAction
+}
+
+' Runtime composition
+Runtime o-- EventBus
+Runtime o-- UserIntent
+
+' Orchestrator loop
+UtilityAiOrchestrator --> ISensor : SenseAsync(rt)
+UtilityAiOrchestrator --> ICapabilityModule : Propose(rt)
+ICapabilityModule ..> Proposal : yields
+Proposal ..> IConsideration : evaluates
+UtilityAiOrchestrator --> Proposal : score + choose
+Proposal --> IAction : Act(ct)
+
+' Data flow on the blackboard (EventBus)
+ISensor --> EventBus : publish signals/facts
+IAction --> EventBus : publish results/facts
+
+' Example bindings (realizations)
+TopicSensor ..|> ISensor
+SearchAndSummarizeModule ..|> ICapabilityModule
+OutputModule ..|> ICapabilityModule
+NewsSearchAction ..|> IAction
+SummarizerAction ..|> IAction
+TwilloOutputAction ..|> IAction
+
+' Example interactions with core
+TopicSensor ..> Runtime : reads
+SearchAndSummarizeModule ..> Runtime : reads
+OutputModule ..> Runtime : reads
+NewsSearchAction ..> Runtime : may read
+SummarizerAction ..> Runtime : may read
+TwilloOutputAction ..> Runtime : may read
+
+@enduml

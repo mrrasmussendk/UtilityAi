@@ -78,3 +78,17 @@ The orchestrator prints chosen proposals per tick and publishes results back to 
 - The Example project uses OpenAI experimental Responses API; tests suppress the OPENAI001 analyzer where required.
 - Networked actions (OpenAI/NewsAPI) are injected via IAction interfaces so tests run offline.
 - You can add your own capability modules by returning Proposal instances whose actions write facts to EventBus.
+
+---
+
+## Architecture diagram
+
+A high-level component diagram of the core system and the Example wiring is available as PlantUML:
+
+- PlantUML source: docs/architecture.puml
+
+Render options:
+
+- Using Docker (PowerShell):
+  - docker run --rm -v ${PWD}:/workspace plantuml/plantuml docs/architecture.puml
+- Using PlantUML extension in Rider/IntelliJ/VS Code: open docs/architecture.puml and preview.
