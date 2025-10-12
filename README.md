@@ -1,71 +1,80 @@
-# 🧠 Utility-Based AI Orchestrator for .NET
+# 🧠 Utility-AI Orchestrator (.NET 8)
 
-A modular, adaptive **AI orchestration framework** inspired by **game AI decision-making**.  
-Instead of relying on static workflows, this orchestrator continuously **evaluates** which AI agent should act next — balancing **cost, latency, accuracy, and context** in real time.
+A lightweight, modular decision loop for composing AI capabilities using classic Utility AI patterns (proposals + considerations). The orchestrator scores candidate actions each tick and executes the best one based on current facts.
 
-> Don’t script intelligence — **evaluate it.**
-
----
-
-## ⚙️ Core Concepts
-
-| Concept | Description |
-|----------|-------------|
-| **Sensors** | Monitor environment conditions like cost, recency, latency, and uncertainty. |
-| **Agents** | Perform concrete actions such as search, summarization, verification, transcription, or text-to-speech. |
-| **Policy** | Computes utility scores for each agent and selects the best one based on current context. |
-| **Reward Function** | Evaluates outcomes and adjusts weights — enabling learning without retraining. |
-| **Blackboard** | Shared memory where all modules write and read context data. |
-
-Each module is fully **pluggable** and **replaceable**, allowing teams to contribute components independently.
+> Don’t script workflows — evaluate them.
 
 ---
 
-## 🚀 Key Features
+## Core Building Blocks
 
-- 🔄 **Utility-Based Decision Loop** — continuously evaluates, acts, and learns  
-- 🧩 **Modular Architecture** — sensors, agents, and policies are independent modules  
-- 🧠 **Self-Correcting Logic** — adapts without retraining  
-- 💼 **Enterprise-Ready** — clean, scalable architecture for distributed systems  
-- 🧪 **Built with TDD** — robust test coverage and predictable behavior  
-- ⚡ **.NET 8+ Support** — fully compatible with modern .NET environments  
+- EventBus (blackboard): publish/subscribe of the latest fact per type.
+- Considerations: pluggable scoring functions (0..1) that evaluate the current Runtime.
+- Proposal: an action candidate with BaseScore and a set of Considerations; its Utility is the product of all.
+- Capability Modules: provide proposals to the orchestrator based on context.
+- Sensors: write facts into the EventBus (e.g., derived signals, intents).
+- UtilityAiOrchestrator: runs the sense → propose → score → act loop.
 
----
-
-## 🧩 How It Works
-
-1. **Sensors** collect metrics (cost, latency, uncertainty)  
-2. **Policy** assigns utility scores to all available agents  
-3. **Orchestrator** picks the top-scoring action and executes it  
-4. **Reward function** evaluates the result and updates the policy weights  
-5. The loop repeats — continuously optimizing behavior  
+These map to types in the UtilityAi project: UtilityAi.Utils.EventBus/Runtime, UtilityAi.Consideration.*, UtilityAi.Capabilities.ICapabilityModule, UtilityAi.Orchestration.UtilityAiOrchestrator, and actions via UtilityAi.Actions.IAction.
 
 ---
 
-## 💡 Example Use Cases
+## What’s in this repo
 
-- **Knowledge Orchestration:** Coordinate search, summarization, and fact-checking dynamically  
-- **Conversational AI:** Switch between LLMs or output styles based on context  
-- **Monitoring & Research Systems:** Learn when to re-query or re-summarize  
-- **Voice & Media Automation:** Choose between text and audio generation intelligently  
-- **AI Gateways:** Balance multiple LLMs and APIs by cost, confidence, and latency  
-
----
-
-## 🧰 Tech Stack
-
-- **.NET 8**
-- **xUnit** for testing  
-- **Clean Architecture** principles  
-- **Dependency Injection** ready  
-- **Lightweight modular interfaces**
+- UtilityAi: core abstractions (EventBus, Runtime, Considerations, Orchestrator, etc.).
+- Example: runnable demo wiring sensors and modules:
+  - SearchAndSummarizeModule: proposes news.search then news.summarize.
+    - NewsSearchAction: calls NewsAPI.org (requires NEWSAPI_KEY).
+    - SummarizerAction: uses OpenAI Responses API to produce a short brief (requires OPENAI_API_KEY).
+  - OutputModule (example): shows how to route the final summary (e.g., SMS action stub).
+  - Sensors: e.g., TopicSensor that can infer or normalize a topic from intent/LLM.
+- Tests: xUnit tests covering EventBus, considerations, proposals, orchestrator flow, and the Search+Summarize module. All tests pass on .NET 8.
 
 ---
 
-## 🚀 Getting Started
+## Quick start
 
-```bash
-git clone https://github.com/yourusername/UtilityAI.Orchestrator.git
-cd UtilityAI.Orchestrator
-dotnet build
-dotnet test
+Prereqs: .NET 8 SDK, and if you want to run the example with real APIs, set environment variables.
+
+- Windows (PowerShell):
+  - $env:OPENAI_API_KEY = "sk-..."
+  - $env:NEWSAPI_KEY = "your_newsapi_key"
+- macOS/Linux (bash):
+  - export OPENAI_API_KEY="sk-..."
+  - export NEWSAPI_KEY="your_newsapi_key"
+
+Build and test:
+
+- dotnet build
+- dotnet test
+
+Run the example:
+
+- cd Example
+- dotnet run
+
+The example wires:
+
+- A TopicSensor
+- SearchAndSummarizeModule(new NewsSearchAction(new HttpClient()), new SummarizerAction(new OpenAiClient()))
+- An OutputModule with a TwilloOutputAction stub
+
+The orchestrator prints chosen proposals per tick and publishes results back to EventBus.
+
+---
+
+## Key types (snapshot)
+
+- Proposal: Utility is BaseScore multiplied by each consideration, clamped to [0,1].
+- HasFact<T>: scores 1.0 if fact exists (or doesn’t, when inverted), else 0.0.
+- CurveSignal<TSignal>: projects a signal to [0,1] and applies a response curve.
+- UtilityAiOrchestrator: per tick: Sense → gather Propose → score → choose → Act.
+- EventBus: Publish<T>(msg), TryGet<T>(out _), GetOrDefault<T>().
+
+---
+
+## Notes
+
+- The Example project uses OpenAI experimental Responses API; tests suppress the OPENAI001 analyzer where required.
+- Networked actions (OpenAI/NewsAPI) are injected via IAction interfaces so tests run offline.
+- You can add your own capability modules by returning Proposal instances whose actions write facts to EventBus.

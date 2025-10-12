@@ -1,64 +1,29 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using Example.Action;
-using Example.Openai;
-using Example.Orchestrator;
+﻿using Example.Openai;
+using Example.OutputModule;
+using Example.OutputModule.Actions;
+using Example.SearchAndSummerizeModule;
+using Example.SearchAndSummerizeModule.Actions;
 using Example.Sensor;
-using UtilityAi.Actions;
-using UtilityAi.Policies;
-using UtilityAi.Sensor;
+using UtilityAi.Orchestration;
 using UtilityAi.Utils;
-
-var bb = new Blackboard();
-bb.Set("prompt", "send me an sms with the latest tech news");
-bb.Set("context:locale", "en-US");
-bb.Set("orchestrator:max_ticks", 8);
 
 var http = new HttpClient {Timeout = TimeSpan.FromSeconds(60)};
 var openai = new OpenAiClient();
+var bus = new EventBus();
+var intent = new UserIntent(
+    Query: "latest news",
+    Delivery: "sms",
+    Topic: "Tech");
 
-var sensors = new ISensor[]
-{
-    new TopicSensor(openai),
-    new RecencySensor(),
-#pragma warning disable OPENAI001
-    new OutputModeSensorEnsemble(openai),
-#pragma warning restore OPENAI001
-    new SafetySensor(),
-    new BudgetSlaSensors(),
-    new UncertaintySensor(),
-};
+var orch = new UtilityAiOrchestrator()
+    // Sensors
+    .AddSensor(new TopicSensor(openai))
+    // Modules
+    .AddModule(new OutputModule(new TwilloOutputAction()))
+    .AddModule(new SearchAndSummarizeModule(new NewsSearchAction(http), new SummarizerAction(openai)));
 
-var agents = new IAction[]
-{
-    new NewsSearchAction(http), // stubbed web/news search
-    new SummarizerAction(openai), // LLM
-#pragma warning disable OPENAI001
-    new VerifierAction(openai), // LLM
-#pragma warning restore OPENAI001
-    new TtsNaturalAction(), // stubbed TTS
-    new TtsFastAction(), // stubbed TTS
-    new TwilloOutputAction()
-};
 
-var policy = new LinearEpsilonGreedyPolicy();
-var reward = new DefaultReward();
-var orchestrator = new Orchestrator(sensors, agents, policy, reward);
+Console.WriteLine("== Utility-AI (Sensors + Considerations) Demo ==\n");
+await orch.RunAsync(bus, intent, maxTicks: 12, ct: CancellationToken.None);
 
-try
-{
-    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
-    var result = await orchestrator.RunAsync(bb, cts.Token);
-    Console.Write(result);
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"[ERROR] {ex.Message}");
-}
-
-// Show final outputs
-Console.WriteLine("\n=== FINAL BLACKBOARD ===");
-foreach (var kv in bb.Snapshot().OrderBy(k => k.Key))
-    Console.WriteLine($"{kv.Key}: {kv.Value}");
-
-Console.WriteLine("\nDone.");
+Console.WriteLine("\n== Final Facts ==");

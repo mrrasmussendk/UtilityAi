@@ -3,7 +3,7 @@
 public sealed record OrchestrationResult(
     string DoneReason,
     int Ticks,
-    IReadOnlyList<DecisionStep> Steps,
+    IReadOnlyList<string> Steps,
     IReadOnlyDictionary<string, object> FinalSnapshot
 )
 {

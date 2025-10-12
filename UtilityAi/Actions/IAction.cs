@@ -2,15 +2,7 @@
 
 namespace UtilityAi.Actions;
 
-public readonly record struct ActionResult(bool Success, string? Error = null);
-
-public sealed record AgentOutcome(bool Success, double Cost, TimeSpan Latency);
-
-public interface IAction
+public interface IAction<in TReq, TRes>
 {
-    string Id { get; }
-    //bool Gate(IBlackboard bb);
-    Task<AgentOutcome> ActAsync(IBlackboard bb, CancellationToken ct);
-    
-    double Score(IBlackboard bb) => 0.0; // Default neutral score
+    Task<TRes> ActAsync(TReq request, IBlackboard? blackboard, CancellationToken ct);
 }

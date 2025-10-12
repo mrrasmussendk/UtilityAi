@@ -4,5 +4,8 @@ namespace UtilityAi.Consideration;
 
 public interface IConsideration
 {
-    double Consider(IBlackboard bb);
+    // Return 0..1 utility contribution based on current runtime (signals/facts)
+    double Evaluate(Runtime rt);
+    string Name { get; }
 }
+
