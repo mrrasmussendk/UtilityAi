@@ -23,7 +23,7 @@ public class TopicSensor : ISensor
     {
         if(rt.Bus.GetOrDefault<Topic>() is not null) return;
 
-        var prompt = rt.Intent.Query + rt.Intent.Topic;
+        var prompt = (rt.Intent.Slots is { } slots && slots.TryGetValue("query", out var q) ? q as string : null) ?? string.Empty;
         var schema = JObject.Parse(@"
             { ""type"":""object"",
               ""properties"": {

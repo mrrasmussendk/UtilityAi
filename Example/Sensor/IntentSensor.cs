@@ -3,11 +3,10 @@ using UtilityAi.Utils;
 
 namespace Example.Sensor;
 
-public class OutputSensor : ISensor
+public sealed class IntentSensor : ISensor
 {
     public Task SenseAsync(Runtime rt, CancellationToken ct)
     {
-        // Derive output mode from the intent slots (fallback to sms)
         string? delivery = null;
         if (rt.Intent.Slots is { } slots && slots.TryGetValue("delivery", out var d))
             delivery = d as string;
@@ -18,7 +17,7 @@ public class OutputSensor : ISensor
             "sms" => "sms",
             "push" => "push",
             "web" => "web",
-            _ => "sms"
+            _ => "unknown"
         };
         rt.Bus.Publish(new SignalOutputMode(mode));
         return Task.CompletedTask;

@@ -1,66 +1,85 @@
-﻿@startuml UtilityAi_Architecture
-' High-level component view of Utility-AI Orchestrator and Example wiring
+﻿@startuml
+' Utility-AI Orchestrator Architecture (Blackboard + Utility AI)
+' Reflects current codebase as of 2025-10-13
+
 skinparam componentStyle rectangle
+skinparam monochrome true
 skinparam shadowing false
-skinparam packageStyle rectangle
-skinparam defaultTextAlignment center
-skinparam ArrowColor #555555
-skinparam componentBorderColor #333333
-skinparam packageBorderColor #333333
-skinparam packageTitleFontStyle bold
 
-package "UtilityAi (Core)" as CORE {
-  interface ISensor
-  interface ICapabilityModule
-  interface IAction
-  interface IConsideration
-
-  component EventBus
-  component Runtime
-  component Proposal
-  component UtilityAiOrchestrator
-  component UserIntent
+package "UtilityAi (Framework Core)" {
+  [EventBus] as EventBus
+  [Runtime] as Runtime
+  [Proposal] as Proposal
+  [Considerations] as Considerations
+  [ISensor] as ISensor
+  [ICapabilityModule] as ICapabilityModule
+  [UtilityAiOrchestrator] as Orchestrator
+  [ISelectionStrategy\nMaxUtilitySelection] as Selection
+  [UserIntent\n- IntentGoal\n- Slots: IDictionary<string, object?>\n- IntentConstraints] as UserIntent
 }
 
-package "Example" as EX {
-  component TopicSensor
-  component SearchAndSummarizeModule
-  component NewsSearchAction
-  component SummarizerAction
-  component OutputModule
-  component TwilloOutputAction
+package "Example (Demo App)" {
+  [TopicSensor] as TopicSensor
+  [IntentSensor] as IntentSensor
+  [OutputSensor] as OutputSensor
+  [SearchAndSummarizeModule] as SearchModule
+  [OutputModule] as OutputModule
+  [NewsSearchAction] as NewsSearchAction
+  [SummarizerAction] as SummarizerAction
+  [TwilloOutputAction] as TwilloAction
+  [SignalOutputMode] as SignalOutputMode
+  [Topic] as Topic
+  [Summary] as Summary
+  [SearchResults] as SearchResults
 }
 
-' Runtime composition
-Runtime o-- EventBus
-Runtime o-- UserIntent
+' Core relationships
+UserIntent -d-> Runtime : provided to
+EventBus -d-> Runtime : provided to
+Runtime -u-> Orchestrator : passed into ticks
 
-' Orchestrator loop
-UtilityAiOrchestrator --> ISensor : SenseAsync(rt)
-UtilityAiOrchestrator --> ICapabilityModule : Propose(rt)
-ICapabilityModule ..> Proposal : yields
-Proposal ..> IConsideration : evaluates
-UtilityAiOrchestrator --> Proposal : score + choose
-Proposal --> IAction : Act(ct)
+ISensor -r-> EventBus : Publish<T>() facts
+ICapabilityModule -r-> Proposal : returns
+Considerations -d-> Proposal : scored by
+Selection -d-> Orchestrator : choose proposal
 
-' Data flow on the blackboard (EventBus)
-ISensor --> EventBus : publish signals/facts
-IAction --> EventBus : publish results/facts
+Orchestrator -d-> ISensor : Sense()
+Orchestrator -d-> ICapabilityModule : Propose()
+Orchestrator -d-> Proposal : Score -> Act()
+Proposal -r-> EventBus : actions publish facts
 
-' Example bindings (realizations)
-TopicSensor ..|> ISensor
-SearchAndSummarizeModule ..|> ICapabilityModule
-OutputModule ..|> ICapabilityModule
-NewsSearchAction ..|> IAction
-SummarizerAction ..|> IAction
-TwilloOutputAction ..|> IAction
+' Example wiring
+IntentSensor -r-> EventBus : publish SignalOutputMode
+OutputSensor -r-> EventBus : publish SignalOutputMode
+TopicSensor -r-> EventBus : publish Topic
 
-' Example interactions with core
-TopicSensor ..> Runtime : reads
-SearchAndSummarizeModule ..> Runtime : reads
-OutputModule ..> Runtime : reads
-NewsSearchAction ..> Runtime : may read
-SummarizerAction ..> Runtime : may read
-TwilloOutputAction ..> Runtime : may read
+SearchModule -r-> Proposal : news.search / news.summarize
+OutputModule -r-> Proposal : output.sendSms
+
+NewsSearchAction -r-> SearchModule
+SummarizerAction -r-> SearchModule
+TwilloAction -r-> OutputModule
+
+' Facts on the bus (type-indexed latest)
+SignalOutputMode -u-> EventBus
+Topic -u-> EventBus
+SearchResults -u-> EventBus
+Summary -u-> EventBus
+
+' Flow annotation
+note top of Orchestrator
+Sense -> Propose -> Score -> Act
+(Utility = BaseScore * product(considerations))
+end note
+
+' Intent handling annotation
+note right of UserIntent
+Framework keeps intent generic:
+- Goal (string name)
+- Slots (key/object)
+- Constraints (optional)
+Example sensors translate
+slots to typed facts.
+end note
 
 @enduml

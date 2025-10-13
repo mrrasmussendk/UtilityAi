@@ -1,6 +1,5 @@
 ﻿using Example.OutputModule.Actions;
 using Example.OutputModule.DTO;
-using Example.SearchAndSummerizeModule.DTO;
 using Example.Sensor;
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
@@ -14,7 +13,7 @@ public sealed class OutputModule(TwilloOutputAction smsOutputAction) : ICapabili
 {
     public IEnumerable<Proposal> Propose(Runtime rt)
     {
-        var haveSummary = rt.Bus.GetOrDefault<Summary>() is not null;
+        var haveSummary = rt.Bus.GetOrDefault<OutputTextMessage>() is not null;
 
         if (haveSummary && rt.Bus.GetOrDefault<SmsMessage>() is null)
         {
@@ -23,13 +22,13 @@ public sealed class OutputModule(TwilloOutputAction smsOutputAction) : ICapabili
                 baseScore: 0.85,
                 cons: new IConsideration[]
                 {
-                    new HasFact<Summary>(true),
+                    new HasFact<OutputTextMessage>(true),
                     new CurveSignal<SignalOutputMode>("mode=sms", s => s.Mode == "sms" ? 1.0 : 0.3,
                         Curves.Identity())
                 },
                 act: async ct =>
                 {
-                    var sum = rt.Bus.GetOrDefault<Summary>()!;
+                    var sum = rt.Bus.GetOrDefault<OutputTextMessage>()!;
                     var req = new SmsMessage(sum.Text);
                     var draft = await smsOutputAction.ActAsync(req, null, ct);
                     rt.Bus.Publish(draft);

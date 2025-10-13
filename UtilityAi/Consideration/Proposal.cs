@@ -9,6 +9,8 @@ public sealed class Proposal
     public IReadOnlyList<IConsideration> Considerations { get; }
     public Func<CancellationToken, Task> Act { get; }
 
+    public string? JsonOutput;
+
     public Proposal(string id, double baseScore, IEnumerable<IConsideration> cons, Func<CancellationToken, Task> act)
     {
         Id = id;

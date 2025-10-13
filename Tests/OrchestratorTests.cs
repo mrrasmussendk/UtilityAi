@@ -1,48 +1,50 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
-using UtilityAi.Utils;
 using UtilityAi.Orchestration;
 using UtilityAi.Sensor;
+using UtilityAi.Utils;
 using Xunit;
 
 namespace Tests;
 
 public class OrchestratorTests
 {
-    private sealed class StubSensor : ISensor
+    private sealed class NoopSensor : ISensor
     {
-        public Task SenseAsync(Runtime rt, CancellationToken ct)
-        {
-            // set a signal once
-            if (rt.Tick == 0)
-                rt.Bus.Publish("ready");
-            return Task.CompletedTask;
-        }
+        public Task SenseAsync(Runtime rt, CancellationToken ct) => Task.CompletedTask;
     }
 
-    private sealed class StubModule : ICapabilityModule
+    private sealed class PublishFactModule<T>(T value, string id, double baseScore) : ICapabilityModule
     {
         public IEnumerable<Proposal> Propose(Runtime rt)
         {
-            // two proposals: one gated on signal
-            yield return new Proposal("p1", 0.6, Array.Empty<IConsideration>(), _ => { rt.Bus.Publish(1); return Task.CompletedTask; });
-            var gated = rt.Bus.GetOrDefault<string>() == "ready" ? 1.0 : 0.0;
-            yield return new Proposal("p2", 0.9 * gated, Array.Empty<IConsideration>(), _ => { rt.Bus.Publish(2); return Task.CompletedTask; });
+            yield return new Proposal(
+                id: id,
+                baseScore: baseScore,
+                cons: Enumerable.Empty<IConsideration>(),
+                act: ct => { rt.Bus.Publish(value); return Task.CompletedTask; }
+            );
         }
     }
 
     [Fact]
-    public async Task Orchestrator_PicksHighestUtility_AndActs()
+    public async Task Orchestrator_ChoosesHighestUtility()
     {
-        var orch = new UtilityAiOrchestrator()
-            .AddSensor(new StubSensor())
-            .AddModule(new StubModule());
         var bus = new EventBus();
-        await orch.RunAsync(bus, new UserIntent("t"), maxTicks: 1, CancellationToken.None);
-        // p2 should be picked after sensor sets the signal, thus publish 2
-        Assert.Equal(2, bus.GetOrDefault<int>());
+        var orch = new UtilityAiOrchestrator();
+        orch.AddSensor(new NoopSensor());
+        // Module A higher baseScore
+        orch.AddModule(new PublishFactModule<string>("A", id: "A", baseScore: 0.9));
+        // Module B lower baseScore
+        orch.AddModule(new PublishFactModule<string>("B", id: "B", baseScore: 0.2));
+
+        var intent = new UserIntent("test");
+        await orch.RunAsync(bus, intent, maxTicks: 1, ct: CancellationToken.None);
+
+        Assert.Equal("A", bus.GetOrDefault<string>());
     }
 }

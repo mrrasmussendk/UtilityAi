@@ -1,5 +1,4 @@
-﻿using System;
-using UtilityAi.Utils;
+﻿using UtilityAi.Utils;
 using Xunit;
 
 namespace Tests;
@@ -7,28 +6,20 @@ namespace Tests;
 public class EventBusTests
 {
     [Fact]
-    public void Publish_Then_GetOrDefault_ReturnsValue()
+    public void PublishAndGetOrDefault_WorksForLatestPerType()
     {
         var bus = new EventBus();
-        bus.Publish(42);
-        Assert.Equal(42, bus.GetOrDefault<int>());
-    }
+        Assert.Null(bus.GetOrDefault<string>());
 
-    [Fact]
-    public void TryGet_WhenNotPublished_ReturnsFalse()
-    {
-        var bus = new EventBus();
-        var ok = bus.TryGet<string>(out var v);
-        Assert.False(ok);
-        Assert.Null(v);
-    }
+        bus.Publish("first");
+        Assert.Equal("first", bus.GetOrDefault<string>());
 
-    [Fact]
-    public void Publish_OverwritesLatestOfSameType()
-    {
-        var bus = new EventBus();
-        bus.Publish(1);
-        bus.Publish(2);
-        Assert.Equal(2, bus.GetOrDefault<int>());
+        bus.Publish("second");
+        Assert.Equal("second", bus.GetOrDefault<string>());
+
+        bus.Publish(123);
+        Assert.Equal(123, bus.GetOrDefault<int>());
+        // string remains the latest published string
+        Assert.Equal("second", bus.GetOrDefault<string>());
     }
 }

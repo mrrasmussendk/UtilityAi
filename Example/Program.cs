@@ -11,14 +11,20 @@ var http = new HttpClient {Timeout = TimeSpan.FromSeconds(60)};
 var openai = new OpenAiClient();
 var bus = new EventBus();
 var intent = new UserIntent(
-    Query: "latest news",
-    Delivery: "sms",
-    Topic: "Tech");
+    Goal: new IntentGoal("search-and-summarize"),
+    Slots: new Dictionary<string, object?>
+    {
+        ["query"] = "latest news",
+        ["delivery"] = "sms"
+    }
+);
 
 var orch = new UtilityAiOrchestrator()
     // Sensors
+    .AddSensor(new IntentSensor())
     .AddSensor(new TopicSensor(openai))
-    // Modules
+    .AddSensor(new SummaryToOutputAdapter())
+    //Modules
     .AddModule(new OutputModule(new TwilloOutputAction()))
     .AddModule(new SearchAndSummarizeModule(new NewsSearchAction(http), new SummarizerAction(openai)));
 
