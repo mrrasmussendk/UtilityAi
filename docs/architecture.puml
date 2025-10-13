@@ -21,8 +21,10 @@ package "UtilityAi (Framework Core)" {
 package "Example (Demo App)" {
   [TopicSensor] as TopicSensor
   [IntentSensor] as IntentSensor
-  [OutputSensor] as OutputSensor
+  ' Optional legacy sensor (alternative to IntentSensor)
+  ' [OutputSensor] as OutputSensor
   [SearchAndSummarizeModule] as SearchModule
+  [SummaryToOutputAdapter] as SummaryToOutputAdapter
   [OutputModule] as OutputModule
   [NewsSearchAction] as NewsSearchAction
   [SummarizerAction] as SummarizerAction
@@ -30,6 +32,7 @@ package "Example (Demo App)" {
   [SignalOutputMode] as SignalOutputMode
   [Topic] as Topic
   [Summary] as Summary
+  [OutputTextMessage] as OutputTextMessage
   [SearchResults] as SearchResults
 }
 
@@ -50,8 +53,9 @@ Proposal -r-> EventBus : actions publish facts
 
 ' Example wiring
 IntentSensor -r-> EventBus : publish SignalOutputMode
-OutputSensor -r-> EventBus : publish SignalOutputMode
+' OutputSensor -r-> EventBus : publish SignalOutputMode
 TopicSensor -r-> EventBus : publish Topic
+SummaryToOutputAdapter -r-> EventBus : publish OutputTextMessage
 
 SearchModule -r-> Proposal : news.search / news.summarize
 OutputModule -r-> Proposal : output.sendSms
@@ -65,6 +69,7 @@ SignalOutputMode -u-> EventBus
 Topic -u-> EventBus
 SearchResults -u-> EventBus
 Summary -u-> EventBus
+OutputTextMessage -u-> EventBus
 
 ' Flow annotation
 note top of Orchestrator

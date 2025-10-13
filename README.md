@@ -55,7 +55,8 @@ Run the example:
 
 The example wires:
 
-- A TopicSensor
+- A TopicSensor and an IntentSensor (reads intent Slots to publish SignalOutputMode)
+- A SummaryToOutputAdapter (converts Summary -> OutputTextMessage for OutputModule)
 - SearchAndSummarizeModule(new NewsSearchAction(new HttpClient()), new SummarizerAction(new OpenAiClient()))
 - An OutputModule with a TwilloOutputAction stub
 
@@ -175,6 +176,7 @@ Run the example:
 The example wires:
 
 - A TopicSensor and an IntentSensor (reads intent Slots to publish SignalOutputMode)
+- A SummaryToOutputAdapter (converts Summary -> OutputTextMessage for OutputModule)
 - SearchAndSummarizeModule(new NewsSearchAction(new HttpClient()), new SummarizerAction(new OpenAiClient()))
 - An OutputModule with a TwilloOutputAction stub
 

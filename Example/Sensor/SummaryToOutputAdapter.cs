@@ -9,7 +9,9 @@ public class SummaryToOutputAdapter : ISensor
 {
     public Task SenseAsync(Runtime rt, CancellationToken ct)
     {
-        if (rt.Bus.GetOrDefault<Summary>() is not null && rt.Bus.GetOrDefault<Summary>() is { } sum)
+        // Publish OutputTextMessage once when a Summary exists
+        if (rt.Bus.GetOrDefault<OutputTextMessage>() is null &&
+            rt.Bus.GetOrDefault<Summary>() is { } sum)
         {
             rt.Bus.Publish(new OutputTextMessage(sum.Text));
         }
