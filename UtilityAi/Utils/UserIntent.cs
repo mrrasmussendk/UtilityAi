@@ -19,7 +19,9 @@ public sealed record UserIntent(
     // Legacy convenience: treat string as a 'query' slot
     public UserIntent(string query)
         : this(new IntentGoal("unspecified"),
-            Slots: new Dictionary<string, object?> { ["query"] = query }) { }
+            Slots: new Dictionary<string, object?> {["query"] = query})
+    {
+    }
 
     // Legacy compatibility: (query, delivery, topic) captured into generic slots
     public UserIntent(string query, string delivery, string topic)
@@ -29,5 +31,7 @@ public sealed record UserIntent(
                 ["query"] = query,
                 ["delivery"] = delivery,
                 ["topic"] = topic
-            }) { }
+            })
+    {
+    }
 }
