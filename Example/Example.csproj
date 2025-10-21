@@ -13,6 +13,10 @@
 
     <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+      <PackageReference Include="NuGet.CommandLine" Version="6.14.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
       <PackageReference Include="Twilio" Version="7.13.3" />
       <PackageReference Include="Twilio.AspNet.Core" Version="8.1.2" />
     </ItemGroup>

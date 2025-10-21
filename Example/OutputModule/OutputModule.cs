@@ -19,7 +19,6 @@ public sealed class OutputModule(TwilloOutputAction smsOutputAction) : ICapabili
         {
             yield return new Proposal(
                 id: "output.sendSms",
-                baseScore: 0.85,
                 cons: new IConsideration[]
                 {
                     new HasFact<OutputTextMessage>(true),

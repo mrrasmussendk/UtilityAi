@@ -4,10 +4,43 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+
+        <!-- NuGet metadata -->
+        <PackageId>UtilityAi</PackageId>
+        <Version>1.0.4</Version> <!-- bump if this exact version was ever pushed -->
+        <Title>UtilityAi</Title>
+        <Description>Lightweight Utility AI helpers for .NET 8 (decision scoring, considerations, actions).</Description>
+        <Authors>Marc Rasmussen</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/mrrasmussendk/UtilityAi</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/mrrasmussendk/UtilityAi</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageTags>utility-ai;ai;decision-making;behavior;dotnet</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <!-- Build determinism & source info -->
+        <Deterministic>true</Deterministic>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+        <!-- Symbols (optional but recommended). If you enable, also push the .snupkg -->
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="OpenAI" Version="2.5.0" />
+        <!-- README & icon must be included -->
+        <None Include="README.md" Pack="true" PackagePath="" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Your real runtime deps here (example: OpenAI). 
+             Keep dependencies minimal & pinned to stable versions. -->
+        <PackageReference Include="OpenAI" Version="2.5.0" />
+        <!-- Add SourceLink to improve debugging experience for consumers -->
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
 
 </Project>

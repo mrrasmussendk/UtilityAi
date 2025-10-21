@@ -18,7 +18,6 @@ public sealed class SearchAndSummarizeModule(UtilityAi.Actions.IAction<SearchQue
         {
             yield return new Proposal(
                 id: "news.search",
-                baseScore: 0.9,
                 cons: new IConsideration[]
                 {
                     new HasFact<SearchResults>(shouldHave: false),
@@ -39,7 +38,6 @@ public sealed class SearchAndSummarizeModule(UtilityAi.Actions.IAction<SearchQue
             var results = rt.Bus.GetOrDefault<SearchResults>()!;
             yield return new Proposal(
                 id: "news.summarize",
-                baseScore: 0.8,
                 cons: new IConsideration[]
                 {
                     new HasFact<SearchResults>(true),

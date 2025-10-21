@@ -24,7 +24,6 @@ public class OrchestratorTests
         {
             yield return new Proposal(
                 id: id,
-                baseScore: baseScore,
                 cons: Enumerable.Empty<IConsideration>(),
                 act: ct => { rt.Bus.Publish(value); return Task.CompletedTask; }
             );
