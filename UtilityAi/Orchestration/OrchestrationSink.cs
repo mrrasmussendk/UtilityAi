@@ -15,7 +15,9 @@ public enum OrchestrationStopReason
     /// <summary>The orchestrator executed the configured maximum number of ticks.</summary>
     MaxTicksReached,
     /// <summary>The provided <see cref="CancellationToken"/> was signaled.</summary>
-    Cancelled
+    Cancelled,
+    GoalAchieved,
+    SensorRequestedStop,
 }
 
 /// <summary>

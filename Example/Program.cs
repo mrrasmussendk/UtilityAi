@@ -28,7 +28,6 @@ var orch = new UtilityAiOrchestrator()
     .AddModule(new OutputModule(new TwilloOutputAction()))
     .AddModule(new SearchAndSummarizeModule(new NewsSearchAction(http), new SummarizerAction(openai)));
 
-
 Console.WriteLine("== Utility-AI (Sensors + Considerations) Demo ==\n");
 await orch.RunAsync(bus, intent, maxTicks: 12, ct: CancellationToken.None);
 

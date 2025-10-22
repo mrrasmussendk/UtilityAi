@@ -7,7 +7,7 @@
 
         <!-- NuGet metadata -->
         <PackageId>UtilityAi</PackageId>
-        <Version>1.0.7</Version> <!-- bump if this exact version was ever pushed -->
+        <Version>1.0.8</Version> <!-- bump if this exact version was ever pushed -->
         <Title>UtilityAi</Title>
         <Description>Lightweight Utility AI helpers for .NET 8 (decision scoring, considerations, actions).</Description>
         <Authors>Marc Rasmussen</Authors>
@@ -43,4 +43,8 @@
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
 
+  <PropertyGroup>
+    <!-- Suppress XML doc warnings and related doc-comment mismatches for public API -->
+    <NoWarn>1591;1572;1573;1734</NoWarn>
+  </PropertyGroup>
 </Project>

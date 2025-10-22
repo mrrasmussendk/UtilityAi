@@ -45,7 +45,7 @@ public sealed class SummarizerAction : IAction<ISearchResults, Summary>
             }");
         try
         {
-            var text = await _client.StructuredJsonAsync(sys, usr, schema, "summerize", "gpt-5-mini", ct);
+            var text = await _client.StructuredJsonAsync(sys, usr, schema, "summerize", _model, ct);
             var obj = JObject.Parse(text);
             var content = obj["output"]?.Value<string>() ?? "";
             if (content.Length > 0)
@@ -60,7 +60,7 @@ public sealed class SummarizerAction : IAction<ISearchResults, Summary>
             // Respect cancellation: do not set error, just return a non-success outcome
             throw;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             throw;
         }

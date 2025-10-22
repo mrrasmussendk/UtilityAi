@@ -20,8 +20,12 @@ public class OrchestratorTests
 
     private sealed class PublishFactModule<T>(T value, string id, double baseScore) : ICapabilityModule
     {
+        // Read baseScore to avoid CS9113 warning (it's unused in this test helper)
+        private readonly double _baseScore = baseScore;
         public IEnumerable<Proposal> Propose(Runtime rt)
         {
+            // touch the field so it's not optimized away entirely
+            _ = _baseScore;
             yield return new Proposal(
                 id: id,
                 cons: Enumerable.Empty<IConsideration>(),
