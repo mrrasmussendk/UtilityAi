@@ -93,3 +93,60 @@ Render options:
 - Using Docker (PowerShell):
   - docker run --rm -v ${PWD}:/workspace plantuml/plantuml docs/architecture.puml
 - Using PlantUML extension in Rider/IntelliJ/VS Code: open docs/architecture.puml and preview.
+
+---
+
+## Observability and outputs (sinks)
+
+As of this version, the orchestrator supports pluggable sinks so you can capture what happened each tick without changing your business logic. This addresses cases where:
+
+- You don’t need any output (use NullSink — the default)
+- You want to log chosen actions/utilities each tick
+- You want to capture a full decision history for testing or analytics
+
+Key types: UtilityAi.Orchestration.IOrchestrationSink, NullSink, CompositeSink, RecordingSink, and OrchestrationStopReason.
+
+Example: record decisions for later
+
+```csharp
+using UtilityAi.Orchestration;
+using UtilityAi.Utils;
+
+var bus = new EventBus();
+var orchestrator = new UtilityAiOrchestrator();
+var sink = new RecordingSink();
+
+await orchestrator.RunAsync(bus, new UserIntent("news.summary"), maxTicks: 10, ct: CancellationToken.None, sink: sink);
+
+foreach (var t in sink.Ticks)
+{
+    Console.WriteLine($"tick={t.Tick} chosen={t.Chosen.Id} utility={t.ChosenUtility:0.000}");
+}
+```
+
+Example: simple console logging sink
+
+```csharp
+public sealed class ConsoleSink : IOrchestrationSink
+{
+    public void OnTickStart(Runtime rt) => Console.WriteLine($"[tick {rt.Tick}] start");
+    public void OnScored(Runtime rt, IReadOnlyList<(Proposal Proposal, double Utility)> scored)
+        => Console.WriteLine($"[tick {rt.Tick}] scored: {string.Join(", ", scored.Select(s => $"{s.Proposal.Id}:{s.Utility:0.000}"))}");
+    public void OnChosen(Runtime rt, Proposal chosen, double utility)
+        => Console.WriteLine($"[tick {rt.Tick}] chosen: {chosen.Id} u={utility:0.000}");
+    public void OnActed(Runtime rt, Proposal chosen) => Console.WriteLine($"[tick {rt.Tick}] acted: {chosen.Id}");
+    public void OnStopped(Runtime rt, OrchestrationStopReason reason) => Console.WriteLine($"stopped: {reason}");
+}
+
+// Usage
+await orchestrator.RunAsync(bus, intent, maxTicks: 10, ct: CancellationToken.None, sink: new ConsoleSink());
+```
+
+Composing sinks
+
+```csharp
+var sink = new CompositeSink(new ConsoleSink(), new RecordingSink());
+await orchestrator.RunAsync(bus, intent, 10, CancellationToken.None, sink);
+```
+
+Stop reasons are surfaced via OnStopped with OrchestrationStopReason.NoProposals, ZeroUtility, MaxTicksReached, or Cancelled.

@@ -236,3 +236,19 @@ Render options:
 - Using Docker (PowerShell):
   - docker run --rm -v ${PWD}:/workspace plantuml/plantuml docs/architecture.puml
 - Using PlantUML extension in Rider/IntelliJ/VS Code: open docs/architecture.puml and preview.
+
+
+---
+
+## Observability and outputs (UtilityAi sinks)
+
+The core orchestrator now supports pluggable sinks for logging/recording decisions without changing control flow. See detailed documentation and examples in UtilityAi/README.md, section "Observability and outputs (sinks)".
+
+Quick usage example:
+
+```csharp
+using UtilityAi.Orchestration;
+
+var orchestrator = new UtilityAiOrchestrator();
+await orchestrator.RunAsync(bus, intent, 10, CancellationToken.None, sink: new RecordingSink());
+```

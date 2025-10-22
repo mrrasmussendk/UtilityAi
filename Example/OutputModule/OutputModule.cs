@@ -29,7 +29,7 @@ public sealed class OutputModule(TwilloOutputAction smsOutputAction) : ICapabili
                 {
                     var sum = rt.Bus.GetOrDefault<OutputTextMessage>()!;
                     var req = new SmsMessage(sum.Text);
-                    var draft = await smsOutputAction.ActAsync(req, null, ct);
+                    var draft = await smsOutputAction.ActAsync(req, ct);
                     rt.Bus.Publish(draft);
                 }
             );

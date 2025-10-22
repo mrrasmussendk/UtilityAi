@@ -26,7 +26,7 @@ public sealed class SearchAndSummarizeModule(UtilityAi.Actions.IAction<SearchQue
                 act: async ct =>
                 {
                     var  topic = rt.Bus.GetOrDefault<Topic>()!;
-                    var res = await search.ActAsync(new SearchQuery(topic.Name), null, ct);
+                    var res = await search.ActAsync(new SearchQuery(topic.Name), ct);
                     rt.Bus.Publish(res);
                 }
             );
@@ -45,7 +45,7 @@ public sealed class SearchAndSummarizeModule(UtilityAi.Actions.IAction<SearchQue
                 },
                 act: async ct =>
                 {
-                    var sumRes = await sum.ActAsync(results, null, ct);
+                    var sumRes = await sum.ActAsync(results, ct);
                     rt.Bus.Publish(sumRes);
                 }
             );

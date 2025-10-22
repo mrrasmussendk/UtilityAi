@@ -16,13 +16,13 @@ public class SearchAndSummarizeModuleTests
 {
     private sealed class FakeSearch : IAction<SearchQuery, SearchResults>
     {
-        public Task<SearchResults> ActAsync(SearchQuery request, IBlackboard? blackboard, CancellationToken ct)
+        public Task<SearchResults> ActAsync(SearchQuery request, CancellationToken ct)
             => Task.FromResult(new SearchResults(new List<NewsItem> { new("t","http://x", System.DateTimeOffset.UtcNow)}));
     }
 
     private sealed class FakeSum : IAction<ISearchResults, Summary>
     {
-        public Task<Summary> ActAsync(ISearchResults request, IBlackboard? blackboard, CancellationToken ct)
+        public Task<Summary> ActAsync(ISearchResults request,  CancellationToken ct)
             => Task.FromResult(new Summary("ok"));
     }
 

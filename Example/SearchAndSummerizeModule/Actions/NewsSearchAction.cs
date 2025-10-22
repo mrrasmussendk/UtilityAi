@@ -13,7 +13,7 @@ public sealed class NewsSearchAction(HttpClient http) : IAction<SearchQuery, Sea
     private readonly HttpClient _http = http ?? throw new ArgumentNullException(nameof(http));
     private readonly string _apiKey = Environment.GetEnvironmentVariable("NEWSAPI_KEY") ?? "";
 
-    public async Task<SearchResults> ActAsync(SearchQuery request, IBlackboard? blackboard, CancellationToken ct)
+    public async Task<SearchResults> ActAsync(SearchQuery request, CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow;
         // 2) Build request URL

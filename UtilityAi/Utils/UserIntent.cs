@@ -2,16 +2,9 @@
 
 public sealed record IntentGoal(string Name);
 
-public sealed record IntentConstraints(
-    DateTimeOffset? From = null,
-    DateTimeOffset? To = null,
-    int? MaxItems = null
-);
-
 public sealed record UserIntent(
     IntentGoal Goal,
     IReadOnlyDictionary<string, object?>? Slots = null,
-    IntentConstraints? Constraints = null,
     string? RequestId = null,
     string? Locale = null
 )

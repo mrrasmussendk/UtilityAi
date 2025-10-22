@@ -24,7 +24,7 @@ public sealed class SummarizerAction : IAction<ISearchResults, Summary>
 
 
     [Experimental("OPENAI001")]
-    public async Task<Summary> ActAsync(ISearchResults request, IBlackboard? blackboard, CancellationToken ct)
+    public async Task<Summary> ActAsync(ISearchResults request, CancellationToken ct)
     {
         var t0 = DateTimeOffset.UtcNow;
         var results = request.Items;

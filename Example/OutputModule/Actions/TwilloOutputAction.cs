@@ -16,7 +16,7 @@ public class TwilloOutputAction : IAction<SmsMessage, bool>
     private string _phoneTo = Environment.GetEnvironmentVariable("PHONE_TO")?.Trim() ?? "";
 
 
-    public async Task<bool> ActAsync(SmsMessage request, IBlackboard? blackboard, CancellationToken ct)
+    public async Task<bool> ActAsync(SmsMessage request, CancellationToken ct)
     {
         TwilioClient.Init(_sid, _token);
         var text = request.Text;

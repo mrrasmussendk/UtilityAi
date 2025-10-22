@@ -7,7 +7,7 @@
 
         <!-- NuGet metadata -->
         <PackageId>UtilityAi</PackageId>
-        <Version>1.0.4</Version> <!-- bump if this exact version was ever pushed -->
+        <Version>1.0.7</Version> <!-- bump if this exact version was ever pushed -->
         <Title>UtilityAi</Title>
         <Description>Lightweight Utility AI helpers for .NET 8 (decision scoring, considerations, actions).</Description>
         <Authors>Marc Rasmussen</Authors>
