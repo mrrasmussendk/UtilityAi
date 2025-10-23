@@ -10,6 +10,8 @@ public enum OrchestrationStopReason
 {
     /// <summary>No capability module produced any <see cref="Proposal"/> for the current tick.</summary>
     NoProposals,
+    /// <summary>Capability modules produced proposals but none were eligible for this tick.</summary>
+    NoEligibleProposals,
     /// <summary>The chosen proposal's utility evaluated to zero and StopAtZero was enabled.</summary>
     ZeroUtility,
     /// <summary>The orchestrator executed the configured maximum number of ticks.</summary>

@@ -28,6 +28,11 @@ public sealed class SearchAndSummarizeModule(UtilityAi.Actions.IAction<SearchQue
                     var  topic = rt.Bus.GetOrDefault<Topic>()!;
                     var res = await search.ActAsync(new SearchQuery(topic.Name), ct);
                     rt.Bus.Publish(res);
+                },
+                eligibilities: new IEligibility[]
+                {
+                    new HasFactEligible<Topic>(),
+                    new NotHasFactEligible<SearchResults>()
                 }
             );
         }

@@ -67,10 +67,21 @@ public sealed class UtilityAiOrchestrator(ISelectionStrategy? selector = null, b
 
     private List<Proposal>? GatherProposalsOrStop(Runtime rt, IOrchestrationSink sink)
     {
-        var proposals = _modules.SelectMany(m => m.Propose(rt)).ToList();
-        if (proposals.Count != 0) return proposals;
-        sink.OnStopped(rt, OrchestrationStopReason.NoProposals);
-        return null;
+        var all = _modules.SelectMany(m => m.Propose(rt)).ToList();
+        if (all.Count == 0)
+        {
+            sink.OnStopped(rt, OrchestrationStopReason.NoProposals);
+            return null;
+        }
+
+        var eligible = all.Where(p => p.IsEligible(rt)).ToList();
+        if (eligible.Count == 0)
+        {
+            sink.OnStopped(rt, OrchestrationStopReason.NoEligibleProposals);
+            return null;
+        }
+
+        return eligible;
     }
 
     private List<(Proposal p, double u)> ScoreProposalsAndNotify(Runtime rt, IEnumerable<Proposal> proposals, IOrchestrationSink sink)
