@@ -11,7 +11,7 @@ public sealed class Proposal
     public double Prior { get; init; } = 1.0;        // base tendency for this action (0..1)
     public double Temperature { get; init; } = 1.0;  // >1 = sharper/stricter, <1 = flatter
     const double Eps = 1e-6;
-
+    public bool NoRepeat = false;
     public string? JsonOutput;
 
     /// <summary>

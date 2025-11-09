@@ -19,7 +19,7 @@ var intent = new UserIntent(
     }
 );
 
-var orch = new UtilityAiOrchestrator()
+var orch = new UtilityAiOrchestrator(null, true, bus)
     // Sensors
     .AddSensor(new IntentSensor())
     .AddSensor(new TopicSensor(openai))
@@ -29,6 +29,6 @@ var orch = new UtilityAiOrchestrator()
     .AddModule(new SearchAndSummarizeModule(new NewsSearchAction(http), new SummarizerAction(openai)));
 
 Console.WriteLine("== Utility-AI (Sensors + Considerations) Demo ==\n");
-await orch.RunAsync(bus, intent, maxTicks: 12, ct: CancellationToken.None);
+await orch.RunAsync(intent, 12, CancellationToken.None);
 
 Console.WriteLine("\n== Final Facts ==");

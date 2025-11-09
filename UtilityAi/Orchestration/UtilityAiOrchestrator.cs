@@ -6,23 +6,40 @@ using UtilityAi.Orchestration.Events;
 
 namespace UtilityAi.Orchestration;
 
-public sealed class UtilityAiOrchestrator(ISelectionStrategy? selector = null, bool StopAtZero = true) : IOrchestrator
+public sealed class UtilityAiOrchestrator : IOrchestrator
 {
     private readonly List<ISensor> _sensors = new();
     private readonly List<ICapabilityModule> _modules = new();
-    private readonly ISelectionStrategy _selector = selector ?? new MaxUtilitySelection();
+    private readonly ISelectionStrategy _selector;
+    private readonly Stack<string> _executionStack = new Stack<string>();
+    private readonly bool _stopAtZero = true;
+    private EventBus _bus;
+    public UtilityAiOrchestrator(ISelectionStrategy? selector = null, bool stopAtZero = true)
+    {
+        _selector = selector ?? new MaxUtilitySelection();
+        _stopAtZero = stopAtZero;
+        _bus = new EventBus();
+        
+    }
 
+    public UtilityAiOrchestrator(ISelectionStrategy? selector = null, bool stopAtZero = true, EventBus? bus = null)
+    {
+        
+        _selector = selector ?? new MaxUtilitySelection();
+        _stopAtZero = stopAtZero;
+        _bus = bus ?? new EventBus();
+    }
     public UtilityAiOrchestrator AddSensor(ISensor s) { _sensors.Add(s); return this; }
     public UtilityAiOrchestrator AddModule(ICapabilityModule m) { _modules.Add(m); return this; }
-    public async Task RunAsync(EventBus bus, UserIntent intent, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
+    public async Task RunAsync(UserIntent intent, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
 
         for (int tick = 0; tick < maxTicks; tick++)
         {
-            if (TryHandleCancellation(bus, intent, tick, sink, ct)) return;
+            if (TryHandleCancellation(_bus, intent, tick, sink, ct)) return;
 
-            var rt = new Runtime(bus, intent, tick);
+            var rt = new Runtime(_bus, intent, tick);
             sink.OnTickStart(rt);
 
             await SenseAsyncAll(rt, ct);
@@ -33,14 +50,16 @@ public sealed class UtilityAiOrchestrator(ISelectionStrategy? selector = null, b
 
             var scored = ScoreProposalsAndNotify(rt, proposals, sink);
 
-            var choice = ChooseAndMaybeStopAtZero(rt, scored, sink, StopAtZero);
+            var choice = ChooseAndMaybeStopAtZero(rt, scored, sink, _stopAtZero);
             if (choice is null) return;
 
             await ActAndNotify(choice.Value.chosen, rt, sink, ct);
+            _executionStack.Push(choice.Value.chosen.Id);
+            _bus.Publish<Stack<string>>(_executionStack);
         }
 
         // If we reached here naturally, we hit the tick cap
-        var finalRt = new Runtime(bus, intent, maxTicks);
+        var finalRt = new Runtime(_bus, intent, maxTicks);
         sink.OnStopped(finalRt, OrchestrationStopReason.MaxTicksReached);
     }
 
