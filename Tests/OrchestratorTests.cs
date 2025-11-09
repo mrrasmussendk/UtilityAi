@@ -38,7 +38,7 @@ public class OrchestratorTests
     public async Task Orchestrator_ChoosesHighestUtility()
     {
         var bus = new EventBus();
-        var orch = new UtilityAiOrchestrator();
+        var orch = new UtilityAiOrchestrator(null, true, bus);
         orch.AddSensor(new NoopSensor());
         // Module A higher baseScore
         orch.AddModule(new PublishFactModule<string>("A", id: "A", baseScore: 0.9));
@@ -46,7 +46,7 @@ public class OrchestratorTests
         orch.AddModule(new PublishFactModule<string>("B", id: "B", baseScore: 0.2));
 
         var intent = new UserIntent("test");
-        await orch.RunAsync(bus, intent, maxTicks: 1, ct: CancellationToken.None);
+        await orch.RunAsync(intent, 1, CancellationToken.None);
 
         Assert.Equal("A", bus.GetOrDefault<string>());
     }

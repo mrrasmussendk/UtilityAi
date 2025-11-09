@@ -15,5 +15,5 @@ public interface IOrchestrator
     /// <param name="maxTicks">Maximum number of decision ticks to execute.</param>
     /// <param name="ct">Cancellation token to stop early.</param>
     /// <param name="sink">Optional observer to receive per-tick telemetry. Pass <c>null</c> (default) for no output.</param>
-    Task RunAsync(EventBus bus, UserIntent intent, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null);
+    Task RunAsync(UserIntent intent, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null);
 }
