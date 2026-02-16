@@ -7,16 +7,16 @@
 
         <!-- NuGet metadata -->
         <PackageId>UtilityAi</PackageId>
-        <Version>1.1.0</Version> <!-- bump if this exact version was ever pushed -->
-        <Title>UtilityAi</Title>
-        <Description>Lightweight Utility AI helpers for .NET 8 (decision scoring, considerations, actions).</Description>
+        <Version>1.1.4</Version>
+        <Title>UtilityAI Framework - AI Agent Orchestration</Title>
+        <Description>Lightweight framework for building AI agent orchestration systems using Utility AI patterns. Features event history, subscriptions, scoped state for multi-agent coordination, and comprehensive documentation.</Description>
         <Authors>Marc Rasmussen</Authors>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/mrrasmussendk/UtilityAi</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageProjectUrl>https://github.com/mrrasmussendk/UtilityAi</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>utility-ai;ai;decision-making;behavior;dotnet</PackageTags>
+        <PackageTags>utility-ai;ai;agent;orchestration;decision-making;llm;multi-agent;ai-framework;dotnet;csharp</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
         <!-- Build determinism & source info -->

@@ -34,9 +34,14 @@ jobs:
     - name: Test
       run: dotnet test --no-build --configuration Release --verbosity normal
 
+    - name: Extract version from tag
+      if: startsWith(github.ref, 'refs/tags/v')
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
     - name: Pack
       if: startsWith(github.ref, 'refs/tags/v')
-      run: dotnet pack ./UtilityAi/UtilityAi.csproj --configuration Release --no-build --output ./artifacts
+      run: dotnet pack ./UtilityAi/UtilityAi.csproj --configuration Release --no-build --output ./artifacts /p:Version=${{ steps.get_version.outputs.VERSION }}
 
     - name: Upload artifacts
       if: startsWith(github.ref, 'refs/tags/v')
