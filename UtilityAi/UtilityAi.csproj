@@ -15,7 +15,7 @@
         <RepositoryUrl>https://github.com/mrrasmussendk/UtilityAi</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageProjectUrl>https://github.com/mrrasmussendk/UtilityAi</PackageProjectUrl>
-        <PackageReadmeFile>../README.md</PackageReadmeFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageTags>utility-ai;ai;agent;orchestration;decision-making;llm;multi-agent;ai-framework;dotnet;csharp</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
