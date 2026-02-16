@@ -6,6 +6,16 @@ using UtilityAi.Orchestration.Events;
 
 namespace UtilityAi.Orchestration;
 
+/// <summary>
+/// The main orchestrator that runs the Sense → Propose → Score → Act loop.
+/// Coordinates sensors, capability modules, and proposal selection to execute
+/// the highest-utility action each tick based on the current state.
+/// </summary>
+/// <remarks>
+/// The orchestrator follows the Utility AI pattern: each tick, sensors update the EventBus,
+/// modules propose candidate actions with considerations, proposals are scored based on
+/// current facts, and the highest-utility eligible proposal is executed.
+/// </remarks>
 public sealed class UtilityAiOrchestrator : IOrchestrator
 {
     private readonly List<ISensor> _sensors = new();
@@ -14,23 +24,54 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     private readonly Stack<string> _executionStack = new Stack<string>();
     private readonly bool _stopAtZero = true;
     private EventBus _bus;
+
+    /// <summary>
+    /// Creates a new UtilityAiOrchestrator with a default EventBus.
+    /// </summary>
+    /// <param name="selector">Strategy for selecting the winning proposal. Defaults to MaxUtilitySelection.</param>
+    /// <param name="stopAtZero">If true, stops orchestration when the chosen proposal has zero utility.</param>
     public UtilityAiOrchestrator(ISelectionStrategy? selector = null, bool stopAtZero = true)
     {
         _selector = selector ?? new MaxUtilitySelection();
         _stopAtZero = stopAtZero;
         _bus = new EventBus();
-        
     }
 
+    /// <summary>
+    /// Creates a new UtilityAiOrchestrator with a provided EventBus.
+    /// </summary>
+    /// <param name="selector">Strategy for selecting the winning proposal. Defaults to MaxUtilitySelection.</param>
+    /// <param name="stopAtZero">If true, stops orchestration when the chosen proposal has zero utility.</param>
+    /// <param name="bus">The EventBus instance to use. If null, creates a new EventBus.</param>
     public UtilityAiOrchestrator(ISelectionStrategy? selector = null, bool stopAtZero = true, EventBus? bus = null)
     {
-        
         _selector = selector ?? new MaxUtilitySelection();
         _stopAtZero = stopAtZero;
         _bus = bus ?? new EventBus();
     }
+
+    /// <summary>
+    /// Registers a sensor that will observe the environment and update the EventBus each tick.
+    /// </summary>
+    /// <param name="s">The sensor to register.</param>
+    /// <returns>This orchestrator instance for fluent chaining.</returns>
     public UtilityAiOrchestrator AddSensor(ISensor s) { _sensors.Add(s); return this; }
+
+    /// <summary>
+    /// Registers a capability module that will propose candidate actions each tick.
+    /// </summary>
+    /// <param name="m">The module to register.</param>
+    /// <returns>This orchestrator instance for fluent chaining.</returns>
     public UtilityAiOrchestrator AddModule(ICapabilityModule m) { _modules.Add(m); return this; }
+
+    /// <summary>
+    /// Runs the orchestration loop for the specified number of ticks or until a stop condition is met.
+    /// </summary>
+    /// <param name="intent">The user's intent, available to all sensors and modules via Runtime.</param>
+    /// <param name="maxTicks">Maximum number of ticks to execute before stopping.</param>
+    /// <param name="ct">Cancellation token to allow early termination.</param>
+    /// <param name="sink">Optional sink for observing orchestration events. Uses NullSink if not provided.</param>
+    /// <returns>A task that completes when orchestration finishes.</returns>
     public async Task RunAsync(UserIntent intent, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
