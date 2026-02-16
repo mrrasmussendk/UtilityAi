@@ -13,13 +13,16 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 ## ✨ Features
 
 - 🎯 **Utility-Based Decision Making** - Actions compete based on dynamic scoring
-- 🏷️ **Attribute-Based Registration** (NEW!) - Java-style annotations for declarative module configuration
-- 📝 **Event History** - Access timestamped event history for LLM conversation context
+- 🏷️ **Attribute-Based Registration** - Java-style annotations for declarative module configuration
+- 📝 **Event History & Memory** - EventBus history + long-term memory retention with `IMemoryStore`
 - 🔔 **Type-Safe Subscriptions** - React to events with callbacks
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
 - 🔌 **Pluggable Architecture** - Sensors, modules, and considerations are fully extensible
+- 📦 **15+ Built-in Considerations** - Threshold, Range, Cooldown, Time-based, Collections, Composite
+- 🔬 **Built-in Sensors** - Time, History, Frequency, Resource monitoring
+- 💾 **Persistence** - Snapshot/Restore EventBus state for session management
 - 📊 **Built-in Observability** - Sinks for logging, metrics, and testing
-- 🧪 **Well Tested** - 69 comprehensive tests covering all core functionality
+- 🧪 **Well Tested** - 69+ comprehensive tests covering all core functionality
 - 📚 **Production Ready** - Thread-safe, documented, with integration guides
 
 ---
@@ -87,6 +90,7 @@ See the [Example](./Example/) project for a complete demo comparing both approac
 
 ### Getting Started
 - **[Architecture Guide](./docs/ARCHITECTURE.md)** - Understanding the framework design and patterns
+- **[Built-in Components](./docs/BUILT_IN_COMPONENTS.md)** - Complete reference for considerations, sensors, modules
 - **[Integration Guide](./docs/INTEGRATION.md)** - Connect to OpenAI, Anthropic, Azure AI, and more
 - **[Example Project](./Example/)** - Complete working task management system
 
@@ -95,11 +99,12 @@ See the [Example](./Example/) project for a complete demo comparing both approac
 - **[Sensors](./docs/ARCHITECTURE.md#3-sensors-isensor)** - Observing and publishing facts
 - **[Capability Modules](./docs/ARCHITECTURE.md#4-capability-modules-icapabilitymodule)** - Proposing actions
 - **[Considerations](./docs/ARCHITECTURE.md#6-considerations-iconsideration)** - Scoring proposals
+- **[Memory System](./docs/BUILT_IN_COMPONENTS.md#-memory-system)** - Long-term fact retention beyond EventBus
 - **[Observability](./docs/ARCHITECTURE.md#8-observability-iorchestrationSink)** - Monitoring and debugging
 
 ### Advanced Topics
 - **[Multi-Agent Coordination](./docs/INTEGRATION.md#multi-agent-coordination)** - Patterns for agent collaboration
-- **[State Persistence](./docs/INTEGRATION.md#state-persistence)** - Saving and restoring orchestration state
+- **[State Persistence](./docs/BUILT_IN_COMPONENTS.md#persistence)** - Snapshot/Restore for session management
 - **[LLM Integration](./docs/INTEGRATION.md#llm-integration)** - Examples for OpenAI, Anthropic, Azure
 - **[Testing Patterns](./docs/INTEGRATION.md#pattern-testing-assertions)** - How to test your orchestration logic
 
