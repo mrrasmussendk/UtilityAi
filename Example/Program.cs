@@ -1,5 +1,4 @@
-﻿using Example.TaskManagement;
-using Example.TaskManagement.Sensors;
+﻿using Example.TaskManagement.Sensors;
 using Example.TaskManagement.Modules;
 using UtilityAi.Consideration;
 using UtilityAi.Orchestration;
