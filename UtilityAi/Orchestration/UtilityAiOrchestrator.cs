@@ -78,30 +78,66 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
 
         for (int tick = 0; tick < maxTicks; tick++)
         {
-            if (TryHandleCancellation(_bus, intent, tick, sink, ct)) return;
-
-            var rt = new Runtime(_bus, intent, tick);
-            sink.OnTickStart(rt);
-
-            await SenseAsyncAll(rt, ct);
-            if (TryStopFromSensors(rt, sink)) return;
-
-            var proposals = GatherProposalsOrStop(rt, sink);
-            if (proposals is null) return;
-
-            var scored = ScoreProposalsAndNotify(rt, proposals, sink);
-
-            var choice = ChooseAndMaybeStopAtZero(rt, scored, sink, _stopAtZero);
-            if (choice is null) return;
-
-            await ActAndNotify(choice.Value.chosen, rt, sink, ct);
-            _executionStack.Push(choice.Value.chosen.Id);
-            _bus.Publish<Stack<string>>(_executionStack);
+            var tickResult = await RunTickAsync(intent, tick, ct, sink);
+            if (tickResult == null) return;
         }
 
         // If we reached here naturally, we hit the tick cap
         var finalRt = new Runtime(_bus, intent, maxTicks);
         sink.OnStopped(finalRt, OrchestrationStopReason.MaxTicksReached);
+    }
+
+    /// <summary>
+    /// Runs the orchestration loop until it reaches quiescence (utility below threshold) or hit max ticks.
+    /// Perfect for chat agents where you want to "finish the thought".
+    /// </summary>
+    public async Task RunUntilQuiescentAsync(UserIntent intent, double threshold, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
+    {
+        sink ??= NullSink.Instance;
+
+        for (int tick = 0; tick < maxTicks; tick++)
+        {
+            var result = await RunTickAsync(intent, tick, ct, sink);
+            if (result == null) return;
+
+            if (result.ChosenUtility < threshold)
+            {
+                var rt = new Runtime(_bus, intent, tick);
+                sink.OnStopped(rt, OrchestrationStopReason.Quiescent);
+                return;
+            }
+        }
+
+        var finalRt = new Runtime(_bus, intent, maxTicks);
+        sink.OnStopped(finalRt, OrchestrationStopReason.MaxTicksReached);
+    }
+
+    public async Task<OrchestrationTick?> RunTickAsync(UserIntent intent, int tick, CancellationToken ct, IOrchestrationSink? sink = null)
+    {
+        sink ??= NullSink.Instance;
+
+        if (TryHandleCancellation(_bus, intent, tick, sink, ct)) return null;
+
+        var rt = new Runtime(_bus, intent, tick);
+        sink.OnTickStart(rt);
+
+        await SenseAsyncAll(rt, ct);
+        if (TryStopFromSensors(rt, sink)) return null;
+
+        var proposals = GatherProposalsOrStop(rt, sink);
+        if (proposals is null) return null;
+
+        var scored = ScoreProposalsAndNotify(rt, proposals, sink);
+
+        var choice = ChooseAndMaybeStopAtZero(rt, scored, sink, _stopAtZero);
+        if (choice is null) return null;
+
+        await ActAndNotify(choice.Value.chosen, rt, sink, ct);
+        
+        _executionStack.Push(choice.Value.chosen.Id);
+        _bus.Publish<IReadOnlyList<string>>(_executionStack.ToList());
+
+        return new OrchestrationTick(tick, scored, choice.Value.chosen, choice.Value.utility);
     }
 
     private static bool TryHandleCancellation(EventBus bus, UserIntent intent, int tick, IOrchestrationSink sink, CancellationToken ct)
@@ -159,9 +195,10 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         var chosen = _selector.Select(scored.Select(x => (x.p, x.u)).ToList(), rt);
         var chosenUtility = scored.First(x => ReferenceEquals(x.p, chosen)).u;
 
-        if (stopAtZero && chosenUtility == 0)
+        // Note: We use a small epsilon check because Proposal.Utility uses 1e-6 as a floor for considerations.
+        // If utility is at or below this floor, we treat it as "zero" for stopping purposes.
+        if (stopAtZero && (chosenUtility <= 1.1e-6))
         {
-            sink.OnChosen(rt, chosen, chosenUtility);
             sink.OnStopped(rt, OrchestrationStopReason.ZeroUtility);
             return null;
         }

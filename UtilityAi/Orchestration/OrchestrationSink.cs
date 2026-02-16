@@ -20,6 +20,8 @@ public enum OrchestrationStopReason
     Cancelled,
     GoalAchieved,
     SensorRequestedStop,
+    /// <summary>The orchestrator stopped because the highest utility fell below the quiescence threshold.</summary>
+    Quiescent,
 }
 
 /// <summary>
