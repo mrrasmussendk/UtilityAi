@@ -7,7 +7,7 @@
 
         <!-- NuGet metadata -->
         <PackageId>UtilityAi</PackageId>
-        <Version>1.0.9</Version> <!-- bump if this exact version was ever pushed -->
+        <Version>1.1.0</Version> <!-- bump if this exact version was ever pushed -->
         <Title>UtilityAi</Title>
         <Description>Lightweight Utility AI helpers for .NET 8 (decision scoring, considerations, actions).</Description>
         <Authors>Marc Rasmussen</Authors>
@@ -36,9 +36,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Your real runtime deps here (example: OpenAI). 
-             Keep dependencies minimal & pinned to stable versions. -->
-        <PackageReference Include="OpenAI" Version="2.5.0" />
         <!-- Add SourceLink to improve debugging experience for consumers -->
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>

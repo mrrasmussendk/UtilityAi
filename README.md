@@ -1,254 +1,152 @@
 # 🧠 Utility-AI Orchestrator (.NET 8)
 
-A lightweight, modular decision loop for composing AI capabilities using classic Utility AI patterns (proposals + considerations). The orchestrator scores candidate actions each tick and executes the best one based on current facts.
+A lightweight, modular decision loop for composing AI capabilities using classic **Utility AI** patterns (proposals + considerations). The orchestrator scores candidate actions each tick and executes the best one based on the current context and available facts.
 
 > Don’t script workflows — evaluate them.
 
 ---
 
-## Core Building Blocks
+## 🏗️ Core Building Blocks
 
-- EventBus (blackboard): publish/subscribe of the latest fact per type.
-- Considerations: pluggable scoring functions (0..1) that evaluate the current Runtime.
-- Proposal: an action candidate with BaseScore and a set of Considerations; its Utility is the product of all.
-- Capability Modules: provide proposals to the orchestrator based on context.
-- Sensors: write facts into the EventBus (e.g., derived signals, intents).
-- UtilityAiOrchestrator: runs the sense → propose → score → act loop.
-
-These map to types in the UtilityAi project: UtilityAi.Utils.EventBus/Runtime, UtilityAi.Consideration.*, UtilityAi.Capabilities.ICapabilityModule, UtilityAi.Orchestration.UtilityAiOrchestrator, and actions via UtilityAi.Actions.IAction.
+- **EventBus (Blackboard)**: A central repository for the latest facts of any type.
+- **Sensors**: Services that observe the environment (or internal state) and publish facts to the EventBus.
+- **Considerations**: Pluggable scoring functions (0.0 to 1.0) that evaluate the current state (Runtime).
+- **Proposals**: Potential actions with a `BaseScore` and a set of `Considerations`. Their final utility is the product of all.
+- **Capability Modules**: Domain-specific logic that provides relevant `Proposals` based on the current context.
+- **UtilityAiOrchestrator**: The engine that runs the *Sense → Propose → Score → Act* loop.
 
 ---
 
-## What’s in this repo
+## 📂 What's in this repo
 
-- UtilityAi: core abstractions (EventBus, Runtime, Considerations, Orchestrator, etc.).
-- Example: runnable demo wiring sensors and modules:
-  - SearchAndSummarizeModule: proposes news.search then news.summarize.
-    - NewsSearchAction: calls NewsAPI.org (requires NEWSAPI_KEY).
-    - SummarizerAction: uses OpenAI Responses API to produce a short brief (requires OPENAI_API_KEY).
-  - OutputModule (example): shows how to route the final summary (e.g., SMS action stub).
-  - Sensors: e.g., TopicSensor that can infer or normalize a topic from intent/LLM.
-- Tests: xUnit tests covering EventBus, considerations, proposals, orchestrator flow, and the Search+Summarize module. All tests pass on .NET 8.
-
----
-
-## Quick start
-
-Prereqs: .NET 8 SDK, and if you want to run the example with real APIs, set environment variables.
-
-- Windows (PowerShell):
-  - $env:OPENAI_API_KEY = "sk-..."
-  - $env:NEWSAPI_KEY = "your_newsapi_key"
-- macOS/Linux (bash):
-  - export OPENAI_API_KEY="sk-..."
-  - export NEWSAPI_KEY="your_newsapi_key"
-
-Build and test:
-
-- dotnet build
-- dotnet test
-
-Run the example:
-
-- cd Example
-- dotnet run
-
-The example wires:
-
-- A TopicSensor and an IntentSensor (reads intent Slots to publish SignalOutputMode)
-- A SummaryToOutputAdapter (converts Summary -> OutputTextMessage for OutputModule)
-- SearchAndSummarizeModule(new NewsSearchAction(new HttpClient()), new SummarizerAction(new OpenAiClient()))
-- An OutputModule with a TwilloOutputAction stub
-
-The orchestrator prints chosen proposals per tick and publishes results back to EventBus.
+- **UtilityAi**: The core framework project.
+  - `Utils/EventBus`: Simple, type-safe blackboard for state management.
+  - `Orchestration/UtilityAiOrchestrator`: The main loop runner.
+  - `Consideration`: Built-in considerations like `HasFact<T>` and `CurveSignal<T>`.
+  - `Evaluators`: Response curves (Logistic, Identity, OneMinus) for fine-grained scoring.
+- **Example**: A complete, runnable **Task Management System** demo showing:
+  - **Sensors**: Monitoring resources, initializing task queues, and reading user intent.
+  - **Capability Modules**: Validating, prioritizing, and executing tasks with resource constraints.
+  - **Orchestration**: Multiple modules competing for attention based on task priority, age, and resource availability.
+  - **No External Dependencies**: Fully self-contained example with simulated work and delays.
+- **Tests**: Comprehensive xUnit tests for all core components and orchestration logic.
 
 ---
 
-## Key types (snapshot)
+## 🚀 Quick Start
 
-- Proposal: Utility is BaseScore multiplied by each consideration, clamped to [0,1].
-- HasFact<T>: scores 1.0 if fact exists (or doesn’t, when inverted), else 0.0.
-- CurveSignal<TSignal>: projects a signal to [0,1] and applies a response curve.
-- UtilityAiOrchestrator: per tick: Sense → gather Propose → score → choose → Act.
-- EventBus: Publish<T>(msg), TryGet<T>(out _), GetOrDefault<T>().
+### Prerequisites
+- .NET 8 SDK
 
----
+### Build & Run
+```bash
+# Build the entire solution
+dotnet build
 
-## Notes
+# Run tests
+dotnet test
 
-- The Example project uses OpenAI experimental Responses API; tests suppress the OPENAI001 analyzer where required.
-- Networked actions (OpenAI/NewsAPI) are injected via IAction interfaces so tests run offline.
-- You can add your own capability modules by returning Proposal instances whose actions write facts to EventBus.
+# Run the example project (Task Management System)
+cd Example
+dotnet run
+```
 
----
+### What the Example Shows
+The example simulates a task management system that:
+- **Validates** incoming tasks (checking prerequisites, permissions, etc.)
+- **Prioritizes** tasks based on urgency, age, and mode (urgent/balanced/efficiency)
+- **Executes** tasks in parallel with resource constraints (CPU, memory, max parallel)
+- **Adapts** to task dependencies (some tasks must complete before others start)
 
-## Architecture diagram
-
-A high-level component diagram of the core system and the Example wiring is available as PlantUML:
-
-- PlantUML source: docs/architecture.puml
-
-Render options:
-
-- Using Docker (PowerShell):
-  - docker run --rm -v ${PWD}:/workspace plantuml/plantuml docs/architecture.puml
-- Using PlantUML extension in Rider/IntelliJ/VS Code: open docs/architecture.puml and preview.
-
-# 🧠 Utility-AI Orchestrator (.NET 8)
-
-A lightweight, modular decision loop for composing AI capabilities using classic Utility AI patterns (proposals + considerations). The orchestrator scores candidate actions each tick and executes the best one based on current facts.
-
-> Don’t script workflows — evaluate them.
+Watch as multiple modules compete for attention each tick, with the orchestrator selecting the highest-utility action!
 
 ---
 
-## Core Building Blocks
+## 💡 How it Works (The Loop)
 
-- EventBus (blackboard): publish/subscribe of the latest fact per type.
-- Considerations: pluggable scoring functions (0..1) that evaluate the current Runtime.
-- Proposal: an action candidate with BaseScore and a set of Considerations; its Utility is the product of all.
-- Capability Modules: provide proposals to the orchestrator based on context.
-- Sensors: write facts into the EventBus (e.g., derived signals, intents).
-- UtilityAiOrchestrator: runs the sense → propose → score → act loop.
+The `UtilityAiOrchestrator` operates in discrete **ticks**. Each tick follows these steps:
 
-These map to types in the UtilityAi project: UtilityAi.Utils.EventBus/Runtime, UtilityAi.Consideration.*, UtilityAi.Capabilities.ICapabilityModule, UtilityAi.Orchestration.UtilityAiOrchestrator, and actions via UtilityAi.Actions.IAction.
-
----
-
-## What’s in this repo
-
-- UtilityAi: core abstractions (EventBus, Runtime, Considerations, Orchestrator, etc.).
-- Example: runnable demo wiring sensors and modules:
-  - SearchAndSummarizeModule: proposes news.search then news.summarize.
-    - NewsSearchAction: calls NewsAPI.org (requires NEWSAPI_KEY).
-    - SummarizerAction: uses OpenAI Responses API to produce a short brief (requires OPENAI_API_KEY).
-  - OutputModule (example): shows how to route the final summary (e.g., SMS action stub).
-  - Sensors: e.g., TopicSensor that can infer or normalize a topic from intent/LLM.
-- Tests: xUnit tests covering EventBus, considerations, proposals, orchestrator flow, and slot-based intent sensing. All tests pass on .NET 8.
+1.  **Sense**: All registered `ISensor` instances run, updating the `EventBus` with fresh facts.
+2.  **Propose**: Registered `ICapabilityModule` instances return `Proposal` objects relevant to the current state.
+3.  **Score**: Each `Proposal` is evaluated. Utility = `BaseScore` × `Consideration1` × `Consideration2` × ...
+4.  **Select**: The orchestrator selects the proposal with the highest utility (via `MaxUtilitySelection`).
+5.  **Act**: The chosen proposal's action is executed, which usually publishes new facts to the `EventBus`, influencing the next tick.
 
 ---
 
-## How it works
+## 🛠️ Code Example
 
-This framework follows a Blackboard architecture combined with a Perception–Decision–Action loop and Utility-based selection:
-
-1) Perception (Sensors)
-- Sensors implement ISensor and write typed facts to the EventBus (the blackboard).
-- In the Example project, Intent is kept generic via UserIntent with Slots (a dictionary). Example sensors translate slots into typed signals. For instance, IntentSensor reads Slots["delivery"] and publishes a SignalOutputMode("sms"|"email"|...).
-- Other sensors can normalize user query into a Topic fact (TopicSensor via OpenAI in the example).
-
-2) Decision (Proposals + Considerations)
-- Each capability module implements ICapabilityModule and returns Proposal instances based on current facts.
-- A Proposal has a BaseScore and a set of Considerations; its Utility is the product of BaseScore and all consideration scores (each clamped to [0,1]).
-- Considerations are small scoring policies, e.g., HasFact<T> or CurveSignal<TSignal>.
-
-3) Action (Command)
-- The orchestrator scores proposals and, by default, chooses the max-utility proposal via a pluggable ISelectionStrategy (default: MaxUtilitySelection).
-- The chosen proposal’s Act delegate runs (async), typically publishing new facts to the EventBus.
-
-Separation of concerns
-- Framework core is domain-agnostic: it knows nothing about delivery modes, topics, or queries.
-- Example-specific concepts live under the Example project. They consume generic intent Slots and publish example DTOs such as Topic or SignalOutputMode.
-
----
-
-## Quick start
-
-Prereqs: .NET 8 SDK, and if you want to run the example with real APIs, set environment variables.
-
-- Windows (PowerShell):
-  - $env:OPENAI_API_KEY = "sk-..."
-  - $env:NEWSAPI_KEY = "your_newsapi_key"
-- macOS/Linux (bash):
-  - export OPENAI_API_KEY="sk-..."
-  - export NEWSAPI_KEY="your_newsapi_key"
-
-Build and test:
-
-- dotnet build
-- dotnet test
-
-Run the example:
-
-- cd Example
-- dotnet run
-
-The example wires:
-
-- A TopicSensor and an IntentSensor (reads intent Slots to publish SignalOutputMode)
-- A SummaryToOutputAdapter (converts Summary -> OutputTextMessage for OutputModule)
-- SearchAndSummarizeModule(new NewsSearchAction(new HttpClient()), new SummarizerAction(new OpenAiClient()))
-- An OutputModule with a TwilloOutputAction stub
-
-The orchestrator prints chosen proposals per tick and publishes results back to EventBus.
-
----
-
-## Minimal usage sketch
-
-- Create an EventBus and a UserIntent:
-
-  var bus = new EventBus();
-  var intent = new UserIntent(
-      Goal: new IntentGoal("search-and-summarize"),
-      Slots: new Dictionary<string, object?>
-      {
-          ["query"] = "latest news",
-          ["delivery"] = "sms"
-      }
-  );
-
-- Wire sensors and modules:
-
-  var orch = new UtilityAiOrchestrator()
-      .AddSensor(new IntentSensor())
-      .AddModule(new YourModule());
-
-- Run:
-
-  await orch.RunAsync(bus, intent, maxTicks: 5, ct: CancellationToken.None);
-
----
-
-## Tests
-
-- The Tests project (xUnit) validates key behavior:
-  - EventBus publishes/reads latest fact per type.
-  - Proposal.Utility multiplies base score by consideration scores and clamps.
-  - Orchestrator selects highest-utility proposal via MaxUtilitySelection.
-  - IntentSensor translates intent Slots["delivery"] into SignalOutputMode.
-  - Legacy UserIntent(string) maps to a "query" slot; the (string,string,string) legacy ctor maps query/delivery/topic into Slots.
-
-Run all tests:
-
-- dotnet test
-
----
-
-## Architecture diagram
-
-A high-level component diagram of the core system and the Example wiring is available as PlantUML:
-
-- PlantUML source: docs/architecture.puml
-
-Render options:
-
-- Using Docker (PowerShell):
-  - docker run --rm -v ${PWD}:/workspace plantuml/plantuml docs/architecture.puml
-- Using PlantUML extension in Rider/IntelliJ/VS Code: open docs/architecture.puml and preview.
-
-
----
-
-## Observability and outputs (UtilityAi sinks)
-
-The core orchestrator now supports pluggable sinks for logging/recording decisions without changing control flow. See detailed documentation and examples in UtilityAi/README.md, section "Observability and outputs (sinks)".
-
-Quick usage example:
+Here is a simplified version of the orchestrator setup from the Example project:
 
 ```csharp
 using UtilityAi.Orchestration;
+using UtilityAi.Utils;
 
-var orchestrator = new UtilityAiOrchestrator();
-await orchestrator.RunAsync(bus, intent, 10, CancellationToken.None, sink: new RecordingSink());
+// 1. Initialize the blackboard and intent
+var bus = new EventBus();
+var intent = new UserIntent(
+    Goal: new IntentGoal("process-task-batch"),
+    Slots: new Dictionary<string, object?>
+    {
+        ["tasks"] = new[] { "analyze-data", "generate-report", "backup-db" },
+        ["priority_mode"] = "balanced",
+        ["max_parallel"] = 3
+    }
+);
+
+// 2. Configure the orchestrator with sensors and modules
+var orch = new UtilityAiOrchestrator(null, true, bus)
+    .AddSensor(new IntentSensor())
+    .AddSensor(new ResourceMonitorSensor())
+    .AddSensor(new TaskQueueSensor())
+    .AddModule(new ValidationModule())
+    .AddModule(new PrioritizationModule())
+    .AddModule(new ExecutionModule());
+
+// 3. Run with a sink for visibility
+await orch.RunAsync(intent, maxTicks: 20, CancellationToken.None, sink: new DetailedConsoleSink());
+```
+
+**Output Example:**
+```
+[Tick 0] 🔍 Sensing environment...
+[Tick 0] ⚖️ Scored Proposals:
+  - validate.task-1           | Utility: 0.612
+  - validate.task-4           | Utility: 0.387
+  - validate.task-2           | Utility: 0.354
+[Tick 0] ✨ Chosen: validate.task-1 (u=0.612)
+    ✓ Validated task: generate-report
+[Tick 0] ⚙️ Executed action for validate.task-1
+```
+
+---
+
+## 📈 Observability (Sinks)
+
+You can plug in `IOrchestrationSink` implementations to monitor the decision-making process without modifying your business logic.
+
+```csharp
+public sealed class MyCustomSink : IOrchestrationSink
+{
+    public void OnChosen(Runtime rt, Proposal chosen, double utility)
+        => Console.WriteLine($"Tick {rt.Tick}: Decided to {chosen.Id} with utility {utility:F2}");
+
+    // ... other methods
+}
+```
+
+Built-in sinks:
+- `NullSink`: Does nothing (default).
+- `RecordingSink`: Captures all tick data for later analysis.
+- `CompositeSink`: Forwards events to multiple sinks.
+
+---
+
+## 🗺️ Architecture
+
+A high-level component diagram is available in [docs/architecture.puml](docs/architecture.puml).
+
+Render it using the PlantUML extension in your IDE or via Docker:
+```powershell
+docker run --rm -v ${PWD}:/workspace plantuml/plantuml docs/architecture.puml
 ```

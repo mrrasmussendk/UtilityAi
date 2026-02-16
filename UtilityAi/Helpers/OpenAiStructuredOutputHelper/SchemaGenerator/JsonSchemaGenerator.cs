@@ -9,7 +9,7 @@ namespace UtilityAi.Helpers.OpenAiStructuredOutputHelper.SchemaGenerator;
 
 /// <summary>
 /// Generates a JSON Schema (as JsonNode) for the envelope:
-/// { type: "object", properties: { output: { type:"array", items: <T-schema> }}, required:["output"], additionalProperties:false }
+/// { type: "object", properties: { output: { type:"array", items: [T-schema] }}, required:["output"], additionalProperties:false }
 /// </summary>
 public static class JsonSchemaGenerator
 {
