@@ -13,6 +13,7 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 ## ✨ Features
 
 - 🎯 **Utility-Based Decision Making** - Actions compete based on dynamic scoring
+- 🏷️ **Attribute-Based Registration** (NEW!) - Java-style annotations for declarative module configuration
 - 📝 **Event History** - Access timestamped event history for LLM conversation context
 - 🔔 **Type-Safe Subscriptions** - React to events with callbacks
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
@@ -37,7 +38,7 @@ dotnet build
 dotnet test
 ```
 
-### Basic Example
+### Basic Example (Manual Registration)
 
 ```csharp
 using UtilityAi.Orchestration;
@@ -56,7 +57,29 @@ var intent = new UserIntent(new IntentGoal("my-goal"));
 await orchestrator.RunAsync(intent, maxTicks: 10, CancellationToken.None);
 ```
 
-See the [Example](./Example/) project for a complete task management system demo.
+### 🆕 Attribute-Based Registration (Java-Style Annotations)
+
+```csharp
+using UtilityAi.Capabilities;
+
+// Define modules with attributes
+[Capability(Priority = 100, Domain = "validation")]
+[RequiresFact<TaskQueue>]
+[ActiveWhen("priority_mode", "urgent", "balanced")]
+public class ValidationModule : ICapabilityModule
+{
+    public IEnumerable<Proposal> Propose(Runtime rt) { /* ... */ }
+}
+
+// Auto-discover and register
+var orchestrator = new UtilityAiOrchestrator(bus: bus)
+    .AddSensor(new MySensor())
+    .DiscoverCapabilities(Assembly.GetExecutingAssembly());
+```
+
+**Benefits:** Declarative dependencies • Conditional activation • Automatic ordering • Reduced boilerplate
+
+See the [Example](./Example/) project for a complete demo comparing both approaches.
 
 ---
 
@@ -115,7 +138,7 @@ The framework follows a **Sense → Propose → Score → Act** loop:
 |-----------|---------|---------------|
 | **EventBus** | Central state container with history, subscriptions, and scoping | Use as-is or wrap for persistence |
 | **ISensor** | Observe environment and publish facts | Implement for your data sources |
-| **ICapabilityModule** | Propose candidate actions | Implement for your domain logic |
+| **ICapabilityModule** | Propose candidate actions | Implement + use attributes for auto-discovery |
 | **IConsideration** | Score proposals (0.0-1.0) | Implement custom scoring logic |
 | **IOrchestrationSink** | Observe orchestration events | Implement for logging/metrics |
 
@@ -310,12 +333,12 @@ dotnet test
 UtilityAi/
 ├── UtilityAi/              # Core framework
 │   ├── Utils/              # EventBus, Runtime
-│   ├── Orchestration/      # UtilityAiOrchestrator
+│   ├── Orchestration/      # UtilityAiOrchestrator, OrchestratorExtensions
 │   ├── Sensor/             # ISensor interface
-│   ├── Capabilities/       # ICapabilityModule interface
+│   ├── Capabilities/       # ICapabilityModule, Attributes (NEW!)
 │   ├── Consideration/      # Proposal, IConsideration, built-in considerations
 │   └── Evaluators/         # Response curves (Logistic, Power, etc.)
-├── Example/                # Complete task management demo
+├── Example/                # Complete task management demo (manual + attributes)
 ├── Tests/                  # 69 comprehensive tests
 └── docs/                   # Architecture and integration guides
 ```
@@ -359,6 +382,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 Built with inspiration from:
 - **Utility AI** pattern from game development
 - **Blackboard pattern** from classical AI
+- **Java Annotations** (Spring Framework, Jakarta EE)
 - Modern agent orchestration needs (Microsoft Semantic Kernel, AutoGen, LangGraph)
 
 ---

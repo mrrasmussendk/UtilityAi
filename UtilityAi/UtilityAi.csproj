@@ -31,11 +31,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <!-- README & icon must be included -->
-        <None Include="README.md" Pack="true" PackagePath="" />
-    </ItemGroup>
-
-    <ItemGroup>
         <!-- Add SourceLink to improve debugging experience for consumers -->
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
