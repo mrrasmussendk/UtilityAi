@@ -34,7 +34,9 @@ See [PROPOSAL_PATTERNS.md](./docs/PROPOSAL_PATTERNS.md) for detailed guidance.
 - 🔔 **Type-Safe Subscriptions** - React to events with callbacks
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
 - 🔌 **Pluggable Architecture** - Sensors, modules, and considerations are fully extensible
-- 📦 **15+ Built-in Considerations** - Threshold, Range, Cooldown, Time-based, Collections, Composite
+- 📦 **15+ Built-in Considerations** - SignalConsideration, HasFact, Threshold, Range, Cooldown, Time-based, and more
+- 🎲 **Selection Strategies** - Built-in RandomSelectionStrategy and RoundRobinSelectionStrategy for intentional tie-breaking
+- 🛡️ **Eligibility System** - Separate filtering (eligibility) from scoring (considerations) to prevent common bugs
 - 🔬 **Built-in Sensors** - Time, History, Frequency, Resource monitoring
 - 💾 **Persistence** - Snapshot/Restore EventBus state for session management
 - 📊 **Built-in Observability** - Sinks for logging, metrics, and testing
@@ -147,39 +149,15 @@ Tick 1:
 Tick 2: (repeat with updated EventBus state)
 ```
 
-### 🔧 Creating Custom Considerations
+### 🔧 Built-in Considerations
 
-The framework is designed to be extended with your own considerations. Here's a reusable pattern:
+The framework provides robust considerations out of the box:
 
+**Fact-Based Considerations** (in `UtilityAi.Consideration.General`):
 ```csharp
-// Define a custom consideration that reads from EventBus and applies a response curve
-public sealed class SignalConsideration<T>(
-    string name,
-    Func<T, double> selector,
-    Func<double, double> curve,
-    (double min, double max) inputDomain) : IConsideration where T : notnull
-{
-    public string Name => name;
+using UtilityAi.Consideration.General;
 
-    public double Evaluate(Runtime rt)
-    {
-        // 1. Try to get the fact from EventBus
-        var fact = rt.Bus.GetOrDefault<T>();
-        if (fact == null) return 0.0;
-
-        // 2. Extract the raw signal value
-        var rawValue = selector(fact);
-
-        // 3. Normalize to [0, 1] based on expected input domain
-        var normalized = (rawValue - inputDomain.min) / (inputDomain.max - inputDomain.min);
-        var clamped = Math.Clamp(normalized, 0.0, 1.0);
-
-        // 4. Apply response curve (linear, logistic, power, etc.)
-        return curve(clamped);
-    }
-}
-
-// Usage in a module:
+// Score based on continuous values with response curves
 yield return ProposalHelper.For("my.action")
     .WithConsideration(new SignalConsideration<ResourceUsage>(
         name: "cpu_available",
@@ -189,13 +167,35 @@ yield return ProposalHelper.For("my.action")
     .WithAction(async ct => { /* ... */ });
 ```
 
-**Built-in Considerations:**
-- `HasFact<T>` - Checks if a fact exists on EventBus (1.0 if exists, 0.0 if not)
+**Available Considerations:**
+- `SignalConsideration<T>` - Score continuous values with response curves (recommended for most use cases)
+- `FixedValueConsideration` - Always returns same value (for fallback proposals)
+- `HasFact<T>` - Returns 1.0 if fact exists, 0.0 otherwise (⚠️ see warning below)
+- `NotHasFact<T>` - Returns 1.0 if fact doesn't exist, 0.0 otherwise (⚠️ see warning below)
+- `HasFactWhere<T>` - Returns 1.0 if fact exists and predicate passes (⚠️ see warning below)
 - `ThresholdValue` - Binary threshold (above/below a value)
 - `RangeValue` - Scores based on distance from ideal range
 - `Cooldown` - Time-based gating (prevents rapid re-execution)
 - `TimeWindow` - Active only during specific time periods
 - And 10+ more in [BUILT_IN_COMPONENTS.md](./docs/BUILT_IN_COMPONENTS.md)
+
+**⚠️ Important: Eligibility vs Considerations**
+
+Using `HasFact<T>` or `NotHasFact<T>` as considerations can cause the **geometric mean trap** where proposals unexpectedly score 0.0. For hard requirements (yes/no filtering), use **eligibility** instead:
+
+```csharp
+// ❌ DANGEROUS - Can cause geometric mean = 0
+.WithConsideration(new HasFact<ResearchResults>())
+
+// ✅ CORRECT - Use eligibility for hard requirements
+.WithEligibility(new HasFactEligible<ResearchResults>())
+```
+
+**Golden Rule:**
+- Use **Eligibility** for filtering (yes/no) - `HasFactEligible<T>`, `NotHasFactEligible<T>`
+- Use **Considerations** for scoring (0-1) - `SignalConsideration<T>`, `FixedValueConsideration`
+
+See [ELIGIBILITY_VS_CONSIDERATIONS.md](./docs/ELIGIBILITY_VS_CONSIDERATIONS.md) for detailed explanation
 
 See the example projects for complete implementations:
 - **[AgentAssistant](./Example/AgentAssistant/)** - Conversational AI with LLM integration
@@ -218,6 +218,8 @@ See the example projects for complete implementations:
 - **[Sensors](./docs/ARCHITECTURE.md#3-sensors-isensor)** - Observing and publishing facts
 - **[Capability Modules](./docs/ARCHITECTURE.md#4-capability-modules-icapabilitymodule)** - Proposing actions
 - **[Considerations](./docs/ARCHITECTURE.md#6-considerations-iconsideration)** - Scoring proposals
+- **[Eligibility vs Considerations](./docs/ELIGIBILITY_VS_CONSIDERATIONS.md)** - ⚠️ **Critical:** Understanding when to use each (prevents common bugs)
+- **[Response Curves & Tie-Breaking](./Example/AgentAssistant/CURVES_AND_TIES.md)** - Avoiding utility score ties with proper curves
 - **[Memory System](./docs/BUILT_IN_COMPONENTS.md#-memory-system)** - Long-term fact retention beyond EventBus
 - **[Observability](./docs/ARCHITECTURE.md#8-observability-iorchestrationSink)** - Monitoring and debugging
 

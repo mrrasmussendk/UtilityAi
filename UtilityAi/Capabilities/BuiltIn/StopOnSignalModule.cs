@@ -24,7 +24,7 @@ public sealed class StopOnSignalModule : ICapabilityModule
             id: "stop.on-signal",
             cons: new IConsideration[]
             {
-                new HasFact<StopSignal>(shouldHave: true),
+                new HasFact<StopSignal>(),
                 new ConstantValue(1.0) // Highest priority when signal exists
             },
             act: ct =>
