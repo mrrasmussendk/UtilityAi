@@ -17,16 +17,18 @@ public sealed class DoResearchModule : ICapabilityModule
 {
     public IEnumerable<Proposal> Propose(Runtime rt)
     {
+        // Only propose research if we haven't done it yet
+        var existingResearch = rt.Bus.GetOrDefault<ResearchResults>();
+        if (existingResearch != null) yield break;
+
         // PROPOSAL 1: Web search (for current events, factual queries)
         yield return ProposalHelper.For("research.web")
+            .WithDescription("Search the web for current, factual information")
             .WithConsideration(new SignalConsideration<ConversationContext>(
                 name: "needs_research",
                 selector: ctx => ctx.RequiresResearch ? 1.0 : 0.0,
                 curve: x => x,
                 inputDomain: (0, 1)))
-            .WithConsideration(new HasFact<ResearchResults>(
-                name: "no_existing_research",
-                selector: _ => false)) // Inverted - returns 1.0 if fact doesn't exist
             .WithConsideration(new SignalConsideration<AvailableTools>(
                 name: "web_available",
                 selector: tools => tools.CanAccessWeb ? 1.0 : 0.0,
@@ -35,7 +37,7 @@ public sealed class DoResearchModule : ICapabilityModule
             .WithConsideration(new SignalConsideration<AvailableTools>(
                 name: "rate_limit",
                 selector: tools => tools.RateLimitRemaining,
-                curve: x => x,
+                curve: x => 1.0 / (1.0 + Math.Exp(-0.5 * (x - 5))), // Logistic S-curve centered at 5
                 inputDomain: (0, 10)))
             .WithAction(async ct =>
             {
@@ -55,18 +57,21 @@ public sealed class DoResearchModule : ICapabilityModule
 
         // PROPOSAL 2: Database query (for internal knowledge, structured data)
         yield return ProposalHelper.For("research.database")
+            .WithDescription("Query internal database for structured information")
             .WithConsideration(new SignalConsideration<ConversationContext>(
                 name: "needs_research",
                 selector: ctx => ctx.RequiresResearch ? 1.0 : 0.0,
                 curve: x => x,
                 inputDomain: (0, 1)))
-            .WithConsideration(new HasFact<ResearchResults>(
-                name: "no_existing_research",
-                selector: _ => false)) // Inverted
             .WithConsideration(new SignalConsideration<AvailableTools>(
                 name: "database_available",
                 selector: tools => tools.CanAccessDatabase ? 1.0 : 0.0,
                 curve: x => x,
+                inputDomain: (0, 1)))
+            .WithConsideration(new SignalConsideration<ConversationContext>(
+                name: "preference_for_structured",
+                selector: ctx => ctx.Confidence,
+                curve: x => Math.Sqrt(x), // Square root - slight preference for higher confidence
                 inputDomain: (0, 1)))
             .WithAction(async ct =>
             {
@@ -86,14 +91,17 @@ public sealed class DoResearchModule : ICapabilityModule
 
         // PROPOSAL 3: Cached/embedded knowledge (fallback, no external calls)
         yield return ProposalHelper.For("research.embedded")
+            .WithDescription("Use embedded knowledge as fallback when external sources unavailable")
             .WithConsideration(new SignalConsideration<ConversationContext>(
                 name: "needs_research",
                 selector: ctx => ctx.RequiresResearch ? 1.0 : 0.0,
                 curve: x => x,
                 inputDomain: (0, 1)))
-            .WithConsideration(new HasFact<ResearchResults>(
-                name: "no_existing_research",
-                selector: _ => false)) // Inverted
+            .WithConsideration(new SignalConsideration<AvailableTools>(
+                name: "external_unavailable",
+                selector: tools => (!tools.CanAccessWeb && !tools.CanAccessDatabase) ? 1.0 : 0.3,
+                curve: x => x * x, // Quadratic - strong preference when external is down
+                inputDomain: (0, 1)))
             .WithAction(async ct =>
             {
                 var userMsg = rt.Bus.GetOrDefault<UserMessage>();

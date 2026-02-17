@@ -1,6 +1,4 @@
-using UtilityAi.Consideration;
-
-namespace UtilityAi.Capabilities;
+namespace UtilityAi.Consideration.Attributes;
 
 /// <summary>
 /// Declares that a proposal should use a specific IConsideration implementation.

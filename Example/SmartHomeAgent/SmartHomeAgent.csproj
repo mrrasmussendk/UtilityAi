@@ -10,14 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <!-- Exclude SmartHomeAgent folder - it's a separate project -->
-      <Compile Remove="SmartHomeAgent\**" />
-      <EmbeddedResource Remove="SmartHomeAgent\**" />
-      <None Remove="SmartHomeAgent\**" />
+      <ProjectReference Include="..\..\UtilityAi\UtilityAi.csproj" />
     </ItemGroup>
 
 </Project>

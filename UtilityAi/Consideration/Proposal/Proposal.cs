@@ -13,6 +13,7 @@ public sealed class Proposal
     const double Eps = 1e-6;
     public bool NoRepeat = false;
     public string? JsonOutput;
+    public string? Description { get; init; }  // Human-readable description of what this action does
 
     /// <summary>
     /// 

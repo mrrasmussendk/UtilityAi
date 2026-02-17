@@ -8,12 +8,28 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 
 > **Don't script workflows — evaluate them.**
 
+## ⚡ Core Philosophy
+
+This framework follows a **capability-based** design where:
+
+1. **Capability Modules** = What your agent CAN DO (e.g., "respond to messages", "do research", "handle errors")
+2. **Proposals** = Different STRATEGIES for each capability (e.g., "direct response" vs "ask for clarification" vs "acknowledge")
+3. **Considerations** = Declarative scoring based on EventBus facts (NO if-statements in `Propose()`!)
+4. **Utility System** = Automatically selects the best strategy each tick based on current state
+
+**Anti-Pattern:**
+❌ Don't loop through data items creating proposals: `foreach (var task in tasks) yield return new Proposal(...)`
+✅ Select the best item first, then propose strategies: `var best = tasks.OrderByDescending(...).First(); yield return ProposalHelper.For(...)`
+
+See [PROPOSAL_PATTERNS.md](./docs/PROPOSAL_PATTERNS.md) for detailed guidance.
+
 ---
 
 ## ✨ Features
 
 - 🎯 **Utility-Based Decision Making** - Actions compete based on dynamic scoring
 - 🏷️ **Attribute-Based Registration** - Java-style annotations for declarative module configuration
+- 🔧 **ProposalHelper Fluent API** - Clean, readable proposal creation with method chaining
 - 📝 **Event History & Memory** - EventBus history + long-term memory retention with `IMemoryStore`
 - 🔔 **Type-Safe Subscriptions** - React to events with callbacks
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
@@ -24,6 +40,7 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 - 📊 **Built-in Observability** - Sinks for logging, metrics, and testing
 - 🧪 **Well Tested** - 69+ comprehensive tests covering all core functionality
 - 📚 **Production Ready** - Thread-safe, documented, with integration guides
+- 📖 **Clear Patterns** - Well-documented patterns and anti-patterns to avoid common mistakes
 
 ---
 
@@ -41,48 +58,148 @@ dotnet build
 dotnet test
 ```
 
-### Basic Example (Manual Registration)
+### Complete Working Example
 
-```csharp
-using UtilityAi.Orchestration;
-using UtilityAi.Utils;
-
-// Create the event bus (blackboard for facts)
-var bus = new EventBus();
-
-// Configure orchestrator with sensors and modules
-var orchestrator = new UtilityAiOrchestrator(bus: bus)
-    .AddSensor(new MyEnvironmentSensor())
-    .AddModule(new MyCapabilityModule());
-
-// Run the orchestration loop
-var intent = new UserIntent(new IntentGoal("my-goal"));
-await orchestrator.RunAsync(intent, maxTicks: 10, CancellationToken.None);
-```
-
-### 🆕 Attribute-Based Registration (Java-Style Annotations)
+Here's a simple AI agent that decides between responding directly or doing research:
 
 ```csharp
 using UtilityAi.Capabilities;
+using UtilityAi.Consideration;
+using UtilityAi.Orchestration;
+using UtilityAi.Utils;
 
-// Define modules with attributes
-[Capability(Priority = 100, Domain = "validation")]
-[RequiresFact<TaskQueue>]
-[ActiveWhen("priority_mode", "urgent", "balanced")]
-public class ValidationModule : ICapabilityModule
+// 1. Define your fact types (what goes on the EventBus)
+public record UserMessage(string Text, string UserId);
+public record ConversationContext(double Confidence, bool RequiresResearch);
+public record AssistantResponse(string Text, string Source);
+
+// 2. Create a capability module (what your agent CAN DO)
+[Capability(Priority = 100)]
+[RequiresFact<UserMessage>]
+[RequiresFact<ConversationContext>]
+public class RespondModule : ICapabilityModule
 {
-    public IEnumerable<Proposal> Propose(Runtime rt) { /* ... */ }
+    public IEnumerable<Proposal> Propose(Runtime rt)
+    {
+        // Strategy 1: Direct confident response
+        yield return ProposalHelper.For("respond.direct")
+            .WithConsideration(new SignalConsideration<ConversationContext>(
+                name: "confidence",
+                selector: ctx => ctx.Confidence,
+                curve: x => x,
+                inputDomain: (0, 1)))
+            .WithConsideration(new SignalConsideration<ConversationContext>(
+                name: "no_research_needed",
+                selector: ctx => ctx.RequiresResearch ? 0.0 : 1.0,
+                curve: x => x,
+                inputDomain: (0, 1)))
+            .WithAction(async ct =>
+            {
+                var userMsg = rt.Bus.GetOrDefault<UserMessage>();
+                rt.Bus.Publish(new AssistantResponse($"Response to: {userMsg?.Text}", "direct"));
+            });
+
+        // Strategy 2: Acknowledge and research
+        yield return ProposalHelper.For("respond.research")
+            .WithConsideration(new SignalConsideration<ConversationContext>(
+                name: "needs_research",
+                selector: ctx => ctx.RequiresResearch ? 1.0 : 0.0,
+                curve: x => x,
+                inputDomain: (0, 1)))
+            .WithAction(async ct =>
+            {
+                rt.Bus.Publish(new AssistantResponse("Let me research that...", "acknowledgment"));
+            });
+    }
 }
 
-// Auto-discover and register
+// 3. Set up and run the orchestrator
+var bus = new EventBus();
+
+// Publish initial facts BEFORE orchestration
+bus.Publish(new UserMessage("What's the weather today?", "user-123"));
+bus.Publish(new ConversationContext(Confidence: 0.7, RequiresResearch: true));
+
+// Create orchestrator and discover capability modules
 var orchestrator = new UtilityAiOrchestrator(bus: bus)
-    .AddSensor(new MySensor())
     .DiscoverCapabilities(Assembly.GetExecutingAssembly());
+
+// Run orchestration loop
+var intent = new UserIntent(Goal: new IntentGoal("respond-to-user"));
+await orchestrator.RunAsync(intent, maxTicks: 5, CancellationToken.None);
 ```
 
-**Benefits:** Declarative dependencies • Conditional activation • Automatic ordering • Reduced boilerplate
+**Key Points:**
+- **Facts** are published to EventBus BEFORE orchestration starts
+- **Capability modules** represent what the agent CAN DO (e.g., respond, research, fallback)
+- **Proposals** represent different STRATEGIES for that capability (e.g., direct response vs. research)
+- **Considerations** score proposals based on EventBus facts (no if-statements in `Propose()`!)
+- **Utility system** picks the highest-scoring proposal each tick
 
-See the [Example](./Example/) project for a complete demo comparing both approaches.
+**How it works:**
+```
+Tick 1:
+  - Sensors observe environment → publish facts to EventBus
+  - Modules propose strategies based on EventBus state
+  - Orchestrator scores all proposals using considerations
+  - Highest-utility proposal executes → publishes new facts to EventBus
+
+Tick 2: (repeat with updated EventBus state)
+```
+
+### 🔧 Creating Custom Considerations
+
+The framework is designed to be extended with your own considerations. Here's a reusable pattern:
+
+```csharp
+// Define a custom consideration that reads from EventBus and applies a response curve
+public sealed class SignalConsideration<T>(
+    string name,
+    Func<T, double> selector,
+    Func<double, double> curve,
+    (double min, double max) inputDomain) : IConsideration where T : notnull
+{
+    public string Name => name;
+
+    public double Evaluate(Runtime rt)
+    {
+        // 1. Try to get the fact from EventBus
+        var fact = rt.Bus.GetOrDefault<T>();
+        if (fact == null) return 0.0;
+
+        // 2. Extract the raw signal value
+        var rawValue = selector(fact);
+
+        // 3. Normalize to [0, 1] based on expected input domain
+        var normalized = (rawValue - inputDomain.min) / (inputDomain.max - inputDomain.min);
+        var clamped = Math.Clamp(normalized, 0.0, 1.0);
+
+        // 4. Apply response curve (linear, logistic, power, etc.)
+        return curve(clamped);
+    }
+}
+
+// Usage in a module:
+yield return ProposalHelper.For("my.action")
+    .WithConsideration(new SignalConsideration<ResourceUsage>(
+        name: "cpu_available",
+        selector: r => r.CpuPercent,
+        curve: x => 1.0 - x,  // Inverted: lower CPU = higher score
+        inputDomain: (0, 100)))
+    .WithAction(async ct => { /* ... */ });
+```
+
+**Built-in Considerations:**
+- `HasFact<T>` - Checks if a fact exists on EventBus (1.0 if exists, 0.0 if not)
+- `ThresholdValue` - Binary threshold (above/below a value)
+- `RangeValue` - Scores based on distance from ideal range
+- `Cooldown` - Time-based gating (prevents rapid re-execution)
+- `TimeWindow` - Active only during specific time periods
+- And 10+ more in [BUILT_IN_COMPONENTS.md](./docs/BUILT_IN_COMPONENTS.md)
+
+See the example projects for complete implementations:
+- **[AgentAssistant](./Example/AgentAssistant/)** - Conversational AI with LLM integration
+- **[SmartHomeAgent](./Example/SmartHomeAgent/)** - IoT home automation with competing priorities
 
 ---
 
@@ -92,7 +209,9 @@ See the [Example](./Example/) project for a complete demo comparing both approac
 - **[Architecture Guide](./docs/ARCHITECTURE.md)** - Understanding the framework design and patterns
 - **[Built-in Components](./docs/BUILT_IN_COMPONENTS.md)** - Complete reference for considerations, sensors, modules
 - **[Integration Guide](./docs/INTEGRATION.md)** - Connect to OpenAI, Anthropic, Azure AI, and more
-- **[Example Project](./Example/)** - Complete working task management system
+- **[Example Projects](./Example/)**
+  - **[AgentAssistant](./Example/AgentAssistant/)** - Conversational AI agent with LLM integration patterns
+  - **[SmartHomeAgent](./Example/SmartHomeAgent/)** - IoT home automation balancing energy, security, comfort, and maintenance
 
 ### Core Concepts
 - **[EventBus Patterns](./docs/ARCHITECTURE.md#1-eventbus-blackboard-pattern)** - History, subscriptions, and scoping
@@ -229,22 +348,24 @@ agent1Bus.TryGetWithFallback<GlobalConfig>(out var config); // ✅ Found in pare
 
 ### 4️⃣ Utility-Based Scoring
 
-Proposals are scored dynamically using considerations:
+Proposals are scored dynamically using considerations. Use `ProposalHelper` for clean, fluent syntax:
 
 ```csharp
-new Proposal(
-    id: "respond-to-user",
-    cons: new[]
-    {
-        new HasFact<UserMessage>(),  // 1.0 if message exists, else 0.0
-        new CurveSignal<UserWaitTime>(
-            selector: t => t.Seconds,
-            curve: Curves.Logistic(k: 0.1, x0: 30),  // Urgency increases over time
-            inputDomain: (0, 60)
-        )
-    },
-    act: async ct => { /* respond */ }
-)
+// Create a proposal that scores higher when confidence is high
+yield return ProposalHelper.For("respond-to-user")
+    .WithDescription("Sends a direct, confident response to the user's message")
+    .WithConsideration(new HasFact<UserMessage>())  // 1.0 if exists, 0.0 if not
+    .WithConsideration(new SignalConsideration<ConversationContext>(
+        name: "confidence",
+        selector: ctx => ctx.Confidence,
+        curve: x => x,  // Linear - higher confidence = higher score
+        inputDomain: (0, 1)))
+    .WithConsideration(new SignalConsideration<UserWaitTime>(
+        name: "urgency",
+        selector: t => t.Seconds,
+        curve: x => 1.0 / (1.0 + Math.Exp(-0.1 * (x - 0.5))),  // Logistic S-curve
+        inputDomain: (0, 60)))
+    .WithAction(async ct => { /* respond */ });
 ```
 
 **Utility Formula:**
@@ -252,7 +373,62 @@ new Proposal(
 utility = prior × (geometric_mean_of_considerations)^temperature
 ```
 
+**Key Design Principle:** Considerations do ALL the scoring logic - no if-statements in `Propose()`. Let the utility system decide what action to take based on the current EventBus state.
+
 [Learn more →](./docs/ARCHITECTURE.md#5-proposals)
+
+---
+
+### 5️⃣ Capability Introspection
+
+Introspect all registered capabilities and their actions - perfect for LLM planning:
+
+```csharp
+var orchestrator = new UtilityAiOrchestrator()
+    .DiscoverCapabilities(Assembly.GetExecutingAssembly());
+
+var bus = new EventBus();
+bus.Publish(new UserMessage("Hello"));
+
+var rt = new Runtime(bus, new UserIntent("plan"), 0);
+var capabilities = orchestrator.GetCapabilitiesInfo(rt);
+
+foreach (var cap in capabilities)
+{
+    Console.WriteLine($"Module: {cap.ModuleName}");
+    foreach (var action in cap.PotentialActions)
+    {
+        Console.WriteLine($"  Action: {action.ProposalId}");
+        Console.WriteLine($"    Description: {action.Description}");
+        Console.WriteLine($"    Prior: {action.Prior}, Temperature: {action.Temperature}");
+        Console.WriteLine($"    Considerations: {string.Join(", ", action.ConsiderationNames)}");
+        Console.WriteLine($"    Eligibilities: {string.Join(", ", action.EligibilityNames)}");
+    }
+}
+```
+
+**Output:**
+```
+Module: RespondModule
+  Action: respond.direct
+    Description: Sends a direct, confident response to the user's message
+    Prior: 1.0, Temperature: 1.0
+    Considerations: confidence, no_research_needed
+    Eligibilities:
+  Action: respond.research
+    Description: Acknowledges message and begins research
+    Prior: 0.8, Temperature: 1.0
+    Considerations: needs_research
+    Eligibilities: RequiresAuth
+```
+
+**Use Cases:**
+- LLM-based planning agents that need to know available actions
+- Debugging and documentation generation
+- Dynamic UI generation for agent controls
+- Slack bots and conversational agents that explain their capabilities
+
+[Learn more →](./docs/INTEGRATION.md#capability-introspection)
 
 ---
 
@@ -261,6 +437,9 @@ utility = prior × (geometric_mean_of_considerations)^temperature
 ### OpenAI Integration
 
 ```csharp
+[Capability(Priority = 100, Domain = "llm-response")]
+[RequiresFact<UserMessage>]
+[RequiresFact<ConversationContext>]
 public class OpenAIModule : ICapabilityModule
 {
     private readonly ChatClient _client;
@@ -272,13 +451,18 @@ public class OpenAIModule : ICapabilityModule
 
     public IEnumerable<Proposal> Propose(Runtime rt)
     {
-        var userMsg = rt.Bus.GetOrDefault<UserMessage>();
-        if (userMsg == null) yield break;
-
-        yield return new Proposal(
-            id: "openai.respond",
-            cons: new[] { new HasFact<UserMessage>() },
-            act: async ct =>
+        // Strategy 1: Confident direct response
+        yield return ProposalHelper.For("openai.respond")
+            .WithConsideration(new HasFact<UserMessage>())
+            .WithConsideration(new SignalConsideration<ConversationContext>(
+                name: "confidence",
+                selector: ctx => ctx.Confidence,
+                curve: x => x,
+                inputDomain: (0, 1)))
+            .WithConsideration(new HasFact<AssistantMessage>(
+                name: "not_already_responded",
+                selector: _ => false))  // Inverted - only if no response yet
+            .WithAction(async ct =>
             {
                 // Build context from EventBus history
                 var history = rt.Bus.GetHistory<UserMessage>(maxItems: 5);
@@ -288,11 +472,40 @@ public class OpenAIModule : ICapabilityModule
 
                 var response = await _client.CompleteChatAsync(messages, ct);
                 rt.Bus.Publish(new AssistantMessage(response.Value.Content[0].Text));
-            }
-        );
+            });
+
+        // Strategy 2: Research first, then respond
+        yield return ProposalHelper.For("openai.research_then_respond")
+            .WithConsideration(new HasFact<UserMessage>())
+            .WithConsideration(new SignalConsideration<ConversationContext>(
+                name: "needs_research",
+                selector: ctx => ctx.RequiresResearch ? 1.0 : 0.0,
+                curve: x => x,
+                inputDomain: (0, 1)))
+            .WithConsideration(new HasFact<ResearchResults>())  // Only if research done
+            .WithAction(async ct =>
+            {
+                var research = rt.Bus.GetOrDefault<ResearchResults>();
+                var userMsg = rt.Bus.GetOrDefault<UserMessage>();
+
+                var messages = new List<ChatMessage>
+                {
+                    new SystemChatMessage($"Research data: {research?.Summary}"),
+                    new UserChatMessage(userMsg?.Text ?? "")
+                };
+
+                var response = await _client.CompleteChatAsync(messages, ct);
+                rt.Bus.Publish(new AssistantMessage(response.Value.Content[0].Text));
+            });
     }
 }
 ```
+
+**Key Points:**
+- Multiple strategies for LLM integration (direct response vs. research-enhanced)
+- Uses EventBus history for conversation context
+- Considerations check for required facts and confidence levels
+- Actions publish results back to EventBus for other modules to use
 
 [See more examples →](./docs/INTEGRATION.md#llm-integration)
 
@@ -355,11 +568,80 @@ UtilityAi/
 This framework is ideal for:
 
 - **AI Agent Systems** - Coordinate multiple AI agents with shared and isolated state
-- **LLM-Based Applications** - Build context from event history for prompts
+- **LLM-Based Applications** - Build context from event history for prompts (see [AgentAssistant](./Example/AgentAssistant/))
+- **Smart Home Automation** - Balance energy, security, comfort, and maintenance (see [SmartHomeAgent](./Example/SmartHomeAgent/))
 - **Dynamic Workflows** - Let actions emerge from current state rather than hardcoding sequences
 - **Game AI** - Classic utility AI for NPCs and decision-making
 - **Task Orchestration** - Prioritize and execute tasks based on resources and constraints
 - **Reactive Systems** - React to events with subscriptions while maintaining orchestrated behavior
+
+---
+
+## 🚨 Common Mistakes to Avoid
+
+### ❌ Anti-Pattern: Looping Through Items as Proposals
+
+**WRONG - Don't do this:**
+```csharp
+public IEnumerable<Proposal> Propose(Runtime rt)
+{
+    var tasks = GetAllTasks();
+
+    // ❌ BAD: Yields 100+ proposals that differ only by data instance
+    foreach (var task in tasks)
+    {
+        yield return ProposalHelper.For($"execute.{task.Id}")
+            .WithValue("priority", task.Priority)
+            .WithAction(async ct => await Execute(task, ct));
+    }
+    // This misuses the utility system for item selection!
+}
+```
+
+**Why it's wrong:**
+- Wastes CPU scoring 100+ similar proposals when only 1 executes
+- Confuses "what to do" (capability) with "which data to process" (selection)
+- The utility system is for choosing STRATEGIES, not choosing ITEMS
+
+### ✅ Correct Pattern: Select Best Item First, Then Propose Strategies
+
+**CORRECT - Do this instead:**
+```csharp
+public IEnumerable<Proposal> Propose(Runtime rt)
+{
+    var tasks = GetAllTasks();
+
+    // ✅ GOOD: Select the best item FIRST using domain logic
+    var bestTask = tasks
+        .OrderByDescending(t => t.Priority)
+        .ThenBy(t => t.SubmittedAt)
+        .FirstOrDefault();
+
+    if (bestTask == null) yield break;
+
+    // Propose different STRATEGIES for handling this task
+
+    // Strategy 1: Execute immediately (high priority)
+    yield return ProposalHelper.For("task.execute_immediate")
+        .WithValue("urgency", bestTask.Priority / 10.0)
+        .WithValue("resources", GetResourceAvailability())
+        .WithAction(async ct => await Execute(bestTask, ct));
+
+    // Strategy 2: Batch with similar tasks (efficiency)
+    var similarTasks = tasks.Where(t => t.Type == bestTask.Type).Take(5).ToList();
+    if (similarTasks.Count > 1)
+    {
+        yield return ProposalHelper.For("task.execute_batched")
+            .WithValue("efficiency", similarTasks.Count / 10.0)
+            .WithValue("resources", GetResourceAvailability())
+            .WithAction(async ct => await ExecuteBatch(similarTasks, ct));
+    }
+}
+```
+
+**Key principle:** One module = One CAPABILITY (e.g., "execute tasks"). Multiple proposals = Different STRATEGIES (e.g., "immediate" vs "batched").
+
+**See comprehensive guidance:** [PROPOSAL_PATTERNS.md](./docs/PROPOSAL_PATTERNS.md)
 
 ---
 
@@ -397,6 +679,7 @@ Built with inspiration from:
 - 📖 [Documentation](./docs/)
 - 💬 [Issues](https://github.com/yourusername/UtilityAi/issues)
 - 📧 [Discussions](https://github.com/yourusername/UtilityAi/discussions)
+- 💡 [Example Projects](./Example/) - AgentAssistant & SmartHomeAgent
 
 ---
 

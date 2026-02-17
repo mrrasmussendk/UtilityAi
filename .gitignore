@@ -172,3 +172,5 @@ local.settings.json
 
 # Ignore build outputs from dotnet publish
 **/publish/
+
+.claude/*

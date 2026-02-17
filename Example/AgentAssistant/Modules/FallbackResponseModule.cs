@@ -1,5 +1,6 @@
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
+using UtilityAi.Consideration.General;
 using UtilityAi.Utils;
 
 namespace Example.AgentAssistant.Modules;
@@ -16,64 +17,54 @@ public sealed class FallbackResponseModule : ICapabilityModule
 {
     public IEnumerable<Proposal> Propose(Runtime rt)
     {
-        // PROPOSAL 1: Graceful decline (research needed but unavailable)
+        var hasResearch = rt.Bus.GetOrDefault<ResearchResults>() != null;
+        var context = rt.Bus.GetOrDefault<ConversationContext>();
+
+        // PROPOSAL 1: Graceful decline (research needed but unavailable) - one time only
         yield return ProposalHelper.For("fallback.no_research")
-            .WithConsideration(new HasFact<AssistantResponse>(
-                name: "no_response_yet",
-                selector: _ => false)) // Inverted - only propose if no response exists
             .WithConsideration(new SignalConsideration<ConversationContext>(
-                name: "research_needed",
-                selector: ctx => ctx.RequiresResearch ? 1.0 : 0.0,
+                name: "research_needed_but_missing",
+                selector: ctx => (ctx.RequiresResearch && !hasResearch && !ctx.HasRecentResponse) ? 1.0 : 0.01,
                 curve: x => x,
                 inputDomain: (0, 1)))
-            .WithConsideration(new HasFact<ResearchResults>(
-                name: "research_failed",
-                selector: _ => false)) // Inverted - only if no research results
             .WithAction(async ct =>
             {
                 await Task.Delay(50, ct);
-                var response = "I apologize, but I'm unable to research that topic right now. " +
-                               "Could you try rephrasing your question, or is there something else I can help with?";
-                rt.Bus.Publish(new AssistantResponse(response, "fallback-no-research"));
                 Console.WriteLine($"    🤷 Fallback: Research unavailable");
+
+                // Mark that we've responded so this doesn't win again
+                if (context != null)
+                {
+                    rt.Bus.Publish(context with { HasRecentResponse = true });
+                }
             })
             .Build();
 
         // PROPOSAL 2: Generic helpful response (low confidence)
         yield return ProposalHelper.For("fallback.low_confidence")
-            .WithConsideration(new HasFact<AssistantResponse>(
-                name: "no_response_yet",
-                selector: _ => false)) // Inverted
             .WithConsideration(new SignalConsideration<ConversationContext>(
                 name: "very_low_confidence",
-                selector: ctx => ctx.Confidence < 0.3 ? 1.0 : 0.0,
+                selector: ctx => ctx.Confidence < 0.3 ? 1.0 : 0.001,
                 curve: x => x,
                 inputDomain: (0, 1)))
             .WithAction(async ct =>
             {
                 await Task.Delay(50, ct);
-                var response = "I'm not entirely sure I understand your question. " +
-                               "Could you provide more details or context?";
-                rt.Bus.Publish(new AssistantResponse(response, "fallback-clarification"));
                 Console.WriteLine($"    🤷 Fallback: Low confidence");
+                // Note: Don't publish AssistantResponse - let message.clarify handle actual response
             })
             .Build();
 
         // PROPOSAL 3: Emergency fallback (last resort, always proposes with very low score)
         yield return ProposalHelper.For("fallback.emergency")
-            .WithConsideration(new HasFact<AssistantResponse>(
-                name: "no_response_yet",
-                selector: _ => false)) // Inverted
             .WithConsideration(new FixedValueConsideration(
                 name: "last_resort",
-                value: 0.1)) // Very low - only wins if nothing else can
+                value: 0.001)) // Very low - only wins if nothing else can
             .WithAction(async ct =>
             {
                 await Task.Delay(50, ct);
-                var response = "I'm experiencing some difficulty processing your request. " +
-                               "Please try again or contact support if the issue persists.";
-                rt.Bus.Publish(new AssistantResponse(response, "fallback-emergency"));
                 Console.WriteLine($"    🚨 Emergency fallback triggered");
+                // Note: Don't publish AssistantResponse - this indicates a problem
             })
             .Build();
     }
