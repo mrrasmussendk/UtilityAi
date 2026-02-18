@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\UtilityAi\UtilityAi.csproj" />
+    <ProjectReference Include="..\..\UtilityAi.LLM.Abstractions\UtilityAi.LLM.Abstractions.csproj" />
+    <ProjectReference Include="..\..\UtilityAi.LLM.OpenAI\UtilityAi.LLM.OpenAI.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

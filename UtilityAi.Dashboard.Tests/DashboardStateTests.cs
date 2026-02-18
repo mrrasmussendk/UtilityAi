@@ -194,14 +194,14 @@ public class DashboardStateTests
         var intent = new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>());
         var rt = new Runtime(bus, intent, 0);
 
-        var consideration = new HasFact<string>(true);
+        var consideration = new HasFact<string>();
         var p1 = new Proposal("action.a", new[] { consideration }, _ => Task.CompletedTask);
         var scored = new List<(Proposal, double)> { (p1, 1.0) };
 
         state.RecordScored(0, scored, rt);
 
         Assert.Single(state.CurrentTick!.Proposals[0].Considerations);
-        Assert.Equal("has:String", state.CurrentTick.Proposals[0].Considerations[0].Name);
+        Assert.Equal("HasFact<String>", state.CurrentTick.Proposals[0].Considerations[0].Name);
         Assert.Equal(1.0, state.CurrentTick.Proposals[0].Considerations[0].Score);
     }
 

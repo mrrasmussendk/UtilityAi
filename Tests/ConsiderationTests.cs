@@ -7,22 +7,22 @@ namespace Tests;
 public class ConsiderationTests
 {
     [Fact]
-    public void HasFact_True_WhenFactExists_ElseZero()
+    public void HasFact_ReturnsOne_WhenFactExists_ElseZero()
     {
         var bus = new EventBus();
         var rt = new Runtime(bus, new UserIntent("t"), 0);
-        var cons = new HasFact<int>(true);
+        var cons = new HasFact<int>();
         Assert.Equal(0.0, cons.Evaluate(rt));
         bus.Publish(5);
         Assert.Equal(1.0, cons.Evaluate(rt));
     }
 
     [Fact]
-    public void HasFact_False_Inverts()
+    public void NotHasFact_Inverts_HasFact()
     {
         var bus = new EventBus();
         var rt = new Runtime(bus, new UserIntent("t"), 0);
-        var cons = new HasFact<string>(false);
+        var cons = new NotHasFact<string>();
         Assert.Equal(1.0, cons.Evaluate(rt));
         bus.Publish("hi");
         Assert.Equal(0.0, cons.Evaluate(rt));
@@ -31,8 +31,8 @@ public class ConsiderationTests
     [Fact]
     public void HasFact_Name_IncludesTypeName()
     {
-        var cons = new HasFact<int>(true);
-        Assert.Equal("has:Int32", cons.Name);
+        var cons = new HasFact<int>();
+        Assert.Equal("HasFact<Int32>", cons.Name);
     }
 
     private sealed record Sig(double V);

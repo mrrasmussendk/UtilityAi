@@ -78,6 +78,28 @@ public class AiRequestBuilderTests
     }
 
     [Fact]
+    public void WithJsonSchemaFrom_BooleanField_HasBooleanType()
+    {
+        // Arrange
+        var json = AiRequestBuilder.Create()
+            .WithModel("gpt-4o")
+            .AddUser("test")
+            .WithJsonSchemaFrom<SampleItem>("Items")
+            .BuildJson();
+
+        // Act
+        using var doc = JsonDocument.Parse(json);
+        var format = doc.RootElement.GetProperty("text").GetProperty("format");
+        var schema = JsonNode.Parse(format.GetProperty("schema").GetRawText())!.AsObject();
+        var items = schema["properties"]!.AsObject()["output"]!.AsObject()["items"]!.AsObject();
+        var itemProps = items["properties"]!.AsObject();
+        var active = itemProps["active"]!.AsObject();
+
+        // Assert
+        Assert.Equal("boolean", active["type"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void BuildJson_WithoutModel_Throws()
     {
         var builder = AiRequestBuilder.Create()
