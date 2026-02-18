@@ -4,11 +4,153 @@ This guide shows how to integrate the UtilityAI framework with various AI servic
 
 ## Table of Contents
 
-1. [LLM Integration (OpenAI, Anthropic, Azure)](#llm-integration)
-2. [EventBus Patterns](#eventbus-patterns)
-3. [Multi-Agent Coordination](#multi-agent-coordination)
-4. [State Persistence](#state-persistence)
+1. [Microsoft Agent Framework (MAF) Integration](#microsoft-agent-framework-maf-integration)
+2. [LLM Integration (OpenAI, Anthropic, Azure)](#llm-integration)
+3. [EventBus Patterns](#eventbus-patterns)
+4. [Multi-Agent Coordination](#multi-agent-coordination)
+5. [State Persistence](#state-persistence)
 5. [Observability & Metrics](#observability--metrics)
+
+---
+
+## Microsoft Agent Framework (MAF) Integration
+
+The `UtilityAi.Maf` package provides first-class integration between UtilityAI and [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/) (MAF). This enables utility-based decision-making to select and orchestrate MAF agents — UtilityAI decides **which** agent runs, while MAF handles the actual agent execution.
+
+### Installation
+
+```bash
+dotnet add package UtilityAi
+dotnet add package Microsoft.Agents.AI.Abstractions --prerelease
+```
+
+Then reference the `UtilityAi.Maf` project (or future NuGet package).
+
+### Architecture
+
+```
+UtilityAI (Decision Layer)          MAF (Execution Layer)
+┌─────────────────────────┐         ┌──────────────────────┐
+│  Sense → Propose →      │         │   AIAgent            │
+│  Score → Select →  ──────────────→│   .RunAsync()        │
+│                    Act   │         │   .RunStreamingAsync │
+│                          │         └──────────────────────┘
+│  EventBus ← Result  ←──────────── AgentResponse          │
+└─────────────────────────┘
+```
+
+### Quick Start: Register MAF Agents
+
+```csharp
+using Microsoft.Agents.AI;
+using UtilityAi.Maf;
+using UtilityAi.Orchestration;
+using UtilityAi.Utils;
+
+// Create MAF agents (from Azure OpenAI, custom implementation, etc.)
+AIAgent researchAgent = CreateResearchAgent();
+AIAgent writerAgent = CreateWriterAgent();
+
+// Build orchestrator with MAF agents
+var bus = new EventBus();
+var orchestrator = new UtilityAiOrchestrator(bus: bus)
+    .AddMafAgentSensor(
+        new MafAgentRegistration("research", researchAgent),
+        new MafAgentRegistration("writer", writerAgent))
+    .AddMafAgent(
+        agent: researchAgent,
+        agentName: "research",
+        considerations: new IConsideration[]
+        {
+            new MafAgentAvailable("research"),
+            new HasMafAgentResult("research", invert: true) // Not yet researched
+        })
+    .AddMafAgent(
+        agent: writerAgent,
+        agentName: "writer",
+        considerations: new IConsideration[]
+        {
+            new MafAgentAvailable("writer"),
+            new HasMafAgentResult("research") // Research must be done first
+        });
+
+await orchestrator.RunAsync(
+    new UserIntent("What is utility AI?"),
+    maxTicks: 5,
+    CancellationToken.None);
+
+// Read agent result from EventBus
+var result = bus.GetOrDefault<MafAgentResult>();
+Console.WriteLine(result?.Text);
+```
+
+### Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| `MafAgentCapabilityModule` | Wraps a MAF `AIAgent` as a UtilityAI `ICapabilityModule` |
+| `MafAgentSensor` | Publishes agent availability to the EventBus each tick |
+| `MafOrchestratorExtensions` | `AddMafAgent()` and `AddMafAgentSensor()` for fluent setup |
+| `MafAgentAvailable` | Consideration: scores 1.0 if agent is available |
+| `HasMafAgentResult` | Consideration: scores based on existing agent results |
+| `RequiresMafAgent` | Eligibility gate: requires agent to be registered |
+| `MafAgentRegistration` | Describes a registered agent and its state |
+| `MafAgentResult` | Published to EventBus after agent execution |
+| `MafAgentCatalog` | Full catalog of registered agents |
+
+### Multi-Agent Workflow
+
+The integration naturally supports multi-agent workflows through utility scoring:
+
+```csharp
+// Research agent: high utility when research hasn't been done
+.AddMafAgent(researchAgent, "research",
+    considerations: new IConsideration[]
+    {
+        new MafAgentAvailable("research"),
+        new HasMafAgentResult("research", invert: true), // Not yet done
+    })
+
+// Writer agent: high utility after research completes
+.AddMafAgent(writerAgent, "writer",
+    considerations: new IConsideration[]
+    {
+        new MafAgentAvailable("writer"),
+        new HasMafAgentResult("research"), // Research done
+    })
+```
+
+This creates an emergent workflow: **Research → Write**, where utility scoring determines the sequencing automatically.
+
+### Custom Message Extraction
+
+By default, the module extracts messages from the `UserIntent` query slot. You can customize this:
+
+```csharp
+.AddMafAgent(agent, "my-agent",
+    considerations: new IConsideration[] { new MafAgentAvailable("my-agent") },
+    messageProvider: rt =>
+    {
+        // Read from EventBus, compose from history, etc.
+        var userMsg = rt.Bus.GetOrDefault<UserMessage>();
+        return userMsg?.Text ?? "default query";
+    })
+```
+
+### Full Working Example
+
+See the [`Example.Maf/`](../Example.Maf/) project for a complete working demonstration with:
+- Simulated ResearchAgent and WriterAgent
+- Multi-agent orchestration with automatic agent handoff
+- Custom considerations and sensors
+- Console output showing the decision-making process
+
+### References
+
+- [Microsoft Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework/)
+- [Microsoft.Agents.AI NuGet Package](https://www.nuget.org/packages/Microsoft.Agents.AI.Abstractions)
+- [Agent Framework GitHub](https://github.com/microsoft/agent-framework)
+- [Agent Framework Samples](https://github.com/microsoft/Agent-Framework-Samples)
 
 ---
 
