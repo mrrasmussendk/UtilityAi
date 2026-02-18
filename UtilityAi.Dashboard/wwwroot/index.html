@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UtilityAI Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #242833;
+            --border: #2e3345;
+            --text: #e1e4ed;
+            --text-muted: #8b90a0;
+            --accent: #6c7cff;
+            --accent-glow: rgba(108,124,255,0.25);
+            --green: #3dd68c;
+            --green-glow: rgba(61,214,140,0.2);
+            --red: #ff6b6b;
+            --yellow: #ffd166;
+            --orange: #ff9f43;
+            --radius: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        header h1 span { font-size: 22px; }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-dot.running { background: var(--green); box-shadow: 0 0 8px var(--green-glow); animation: pulse 1.5s ease-in-out infinite; }
+        .status-dot.stopped { background: var(--red); }
+        .status-dot.idle { background: var(--yellow); }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 16px;
+            padding: 16px 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-body { padding: 16px; }
+
+        /* Summary cards */
+        .summary-row {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+
+        .summary-card .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .summary-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .summary-card .sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Proposals panel */
+        .proposal-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .proposal-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .proposal-card.active {
+            border-color: var(--green);
+            box-shadow: 0 0 12px var(--green-glow);
+        }
+
+        .proposal-card.chosen {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .proposal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .proposal-id {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .proposal-id .badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+
+        .badge-active { background: var(--green); color: #000; }
+        .badge-chosen { background: var(--accent); color: #fff; }
+
+        .utility-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .utility-bar-track {
+            flex: 1;
+            height: 6px;
+            background: var(--bg);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .utility-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .utility-value {
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 48px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .considerations-list {
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        .consideration-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 0;
+        }
+
+        .consideration-name {
+            color: var(--text-muted);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .consideration-score {
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+        }
+
+        .mini-bar {
+            width: 50px;
+            height: 4px;
+            background: var(--bg);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .mini-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        /* Editable fields */
+        .edit-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .edit-row label {
+            color: var(--text-muted);
+            min-width: 80px;
+        }
+
+        .edit-row input[type="range"] {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--bg);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .edit-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+
+        .edit-row .edit-value {
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* Timeline */
+        .timeline {
+            grid-column: 1 / -1;
+        }
+
+        .timeline-track {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+
+        .timeline-tick {
+            min-width: 80px;
+            padding: 8px 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .timeline-tick:hover { border-color: var(--accent); }
+        .timeline-tick.selected { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+
+        .timeline-tick .tick-num {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .timeline-tick .tick-action {
+            color: var(--text-muted);
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .eligibility-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 0;
+            font-size: 12px;
+        }
+
+        .elig-icon { font-size: 11px; }
+        .elig-pass { color: var(--green); }
+        .elig-fail { color: var(--red); }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 16px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+        .empty-state p { font-size: 14px; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+            .summary-row { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><span>⚡</span> UtilityAI Dashboard</h1>
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <span id="tickCount" style="color:var(--text-muted)">—</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Summary Cards -->
+        <div class="summary-row">
+            <div class="summary-card">
+                <div class="label">Current Tick</div>
+                <div class="value" id="currentTick">—</div>
+                <div class="sub" id="tickTime"></div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Active Action</div>
+                <div class="value" id="activeAction" style="font-size:16px;word-break:break-all">—</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Top Utility</div>
+                <div class="value" id="topUtility">—</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Proposals</div>
+                <div class="value" id="proposalCount">—</div>
+                <div class="sub" id="overrideCount"></div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="panel timeline">
+            <div class="panel-header">📈 Tick Timeline</div>
+            <div class="panel-body">
+                <div class="timeline-track" id="timeline"></div>
+                <div class="empty-state" id="timelineEmpty">
+                    <div class="icon">⏳</div>
+                    <p>Waiting for orchestration ticks...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Proposals -->
+        <div class="panel">
+            <div class="panel-header">🎯 Proposals &amp; Considerations</div>
+            <div class="panel-body">
+                <div class="proposal-list" id="proposals">
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <p>No proposals yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editing -->
+        <div class="panel">
+            <div class="panel-header">🎛️ Parameter Overrides</div>
+            <div class="panel-body">
+                <div id="overrides">
+                    <div class="empty-state">
+                        <div class="icon">⚙️</div>
+                        <p>Select a proposal to adjust its parameters.<br>
+                        Changes will apply on the next orchestration run.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        const basePath = window.location.pathname.replace(/\/dashboard\/?$/, '');
+        let state = null;
+        let selectedTick = null;
+
+        // Elements
+        const el = {
+            statusDot: document.getElementById('statusDot'),
+            statusText: document.getElementById('statusText'),
+            tickCount: document.getElementById('tickCount'),
+            currentTick: document.getElementById('currentTick'),
+            tickTime: document.getElementById('tickTime'),
+            activeAction: document.getElementById('activeAction'),
+            topUtility: document.getElementById('topUtility'),
+            proposalCount: document.getElementById('proposalCount'),
+            overrideCount: document.getElementById('overrideCount'),
+            timeline: document.getElementById('timeline'),
+            timelineEmpty: document.getElementById('timelineEmpty'),
+            proposals: document.getElementById('proposals'),
+            overrides: document.getElementById('overrides')
+        };
+
+        function utilityColor(u) {
+            if (u >= 0.7) return 'var(--green)';
+            if (u >= 0.4) return 'var(--yellow)';
+            if (u >= 0.2) return 'var(--orange)';
+            return 'var(--red)';
+        }
+
+        function renderSummary(data) {
+            const tick = data.currentTick;
+            el.currentTick.textContent = tick ? tick.tick : '—';
+            el.tickTime.textContent = tick ? new Date(tick.timestamp).toLocaleTimeString() : '';
+            el.activeAction.textContent = data.activeProposalId || '—';
+            el.activeAction.style.color = data.activeProposalId ? 'var(--green)' : 'var(--text-muted)';
+
+            const proposals = tick ? tick.proposals : [];
+            el.proposalCount.textContent = proposals.length || '—';
+
+            const topU = proposals.length > 0 ? Math.max(...proposals.map(p => p.utility)) : null;
+            el.topUtility.textContent = topU !== null ? topU.toFixed(3) : '—';
+            if (topU !== null) el.topUtility.style.color = utilityColor(topU);
+
+            const overCount = Object.keys(data.priorOverrides || {}).length +
+                              Object.keys(data.temperatureOverrides || {}).length;
+            el.overrideCount.textContent = overCount > 0 ? `${overCount} override(s)` : '';
+        }
+
+        function renderTimeline(data) {
+            const ticks = data.ticks || [];
+            if (ticks.length === 0 && !data.currentTick) {
+                el.timelineEmpty.style.display = '';
+                el.timeline.innerHTML = '';
+                return;
+            }
+            el.timelineEmpty.style.display = 'none';
+
+            // Include current tick if not in ticks array
+            const allTicks = [...ticks];
+            if (data.currentTick && !ticks.find(t => t.tick === data.currentTick.tick)) {
+                allTicks.push(data.currentTick);
+            }
+
+            el.timeline.innerHTML = allTicks.map(t => {
+                const isSelected = selectedTick === t.tick;
+                const isCurrent = data.currentTick && t.tick === data.currentTick.tick;
+                return `<div class="timeline-tick${isSelected ? ' selected' : ''}"
+                    data-tick="${t.tick}" onclick="window._selectTick(${t.tick})">
+                    <div class="tick-num">${isCurrent ? '▶ ' : ''}Tick ${t.tick}</div>
+                    <div class="tick-action">${t.chosenProposalId || '—'}</div>
+                    <div style="font-size:11px;color:${utilityColor(t.chosenUtility)}">${t.chosenUtility ? t.chosenUtility.toFixed(3) : ''}</div>
+                </div>`;
+            }).join('');
+
+            el.tickCount.textContent = `${allTicks.length} tick(s)`;
+        }
+
+        function renderProposals(data) {
+            const tick = selectedTick !== null
+                ? (data.ticks || []).find(t => t.tick === selectedTick) || data.currentTick
+                : data.currentTick;
+
+            if (!tick || !tick.proposals || tick.proposals.length === 0) {
+                el.proposals.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>No proposals yet</p></div>';
+                return;
+            }
+
+            const sorted = [...tick.proposals].sort((a, b) => b.utility - a.utility);
+            el.proposals.innerHTML = sorted.map(p => {
+                const isActive = p.id === data.activeProposalId;
+                const isChosen = p.isChosen;
+                const classes = [isActive ? 'active' : '', isChosen ? 'chosen' : ''].filter(Boolean).join(' ');
+                const badges = [
+                    isActive ? '<span class="badge badge-active">RUNNING</span>' : '',
+                    isChosen ? '<span class="badge badge-chosen">CHOSEN</span>' : ''
+                ].join('');
+
+                const considerations = (p.considerations || []).map(c => {
+                    const color = utilityColor(c.score);
+                    return `<div class="consideration-row">
+                        <span class="consideration-name" title="${esc(c.name)}">${esc(c.name)}</span>
+                        <div class="mini-bar"><div class="mini-bar-fill" style="width:${c.score * 100}%;background:${color}"></div></div>
+                        <span class="consideration-score" style="color:${color}">${c.score.toFixed(3)}</span>
+                    </div>`;
+                }).join('');
+
+                const eligibilities = (p.eligibilities || []).map(e => {
+                    const icon = e.isEligible ? '✓' : '✗';
+                    const cls = e.isEligible ? 'elig-pass' : 'elig-fail';
+                    return `<div class="eligibility-row">
+                        <span class="elig-icon ${cls}">${icon}</span>
+                        <span>${esc(e.name)}</span>
+                    </div>`;
+                }).join('');
+
+                return `<div class="proposal-card ${classes}">
+                    <div class="proposal-header">
+                        <span class="proposal-id">${esc(p.id)}${badges}</span>
+                    </div>
+                    <div class="utility-bar-container">
+                        <div class="utility-bar-track">
+                            <div class="utility-bar-fill" style="width:${p.utility * 100}%;background:${utilityColor(p.utility)}"></div>
+                        </div>
+                        <span class="utility-value" style="color:${utilityColor(p.utility)}">${p.utility.toFixed(3)}</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">
+                        Prior: ${p.prior.toFixed(2)} · Temp: ${p.temperature.toFixed(2)}
+                    </div>
+                    ${considerations ? '<div class="considerations-list">' + considerations + '</div>' : ''}
+                    ${eligibilities ? '<div style="margin-top:6px">' + eligibilities + '</div>' : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function renderOverrides(data) {
+            const tick = data.currentTick;
+            if (!tick || !tick.proposals || tick.proposals.length === 0) {
+                el.overrides.innerHTML = '<div class="empty-state"><div class="icon">⚙️</div><p>No proposals available for editing</p></div>';
+                return;
+            }
+
+            const priors = data.priorOverrides || {};
+            const temps = data.temperatureOverrides || {};
+
+            el.overrides.innerHTML = tick.proposals.map(p => {
+                const priorVal = priors[p.id] !== undefined ? priors[p.id] : p.prior;
+                const tempVal = temps[p.id] !== undefined ? temps[p.id] : p.temperature;
+                const hasPriorOverride = priors[p.id] !== undefined;
+                const hasTempOverride = temps[p.id] !== undefined;
+
+                return `<div style="margin-bottom:16px;">
+                    <div style="font-weight:600;font-size:13px;margin-bottom:6px">${esc(p.id)}</div>
+                    <div class="edit-row">
+                        <label>Prior${hasPriorOverride ? ' ✎' : ''}</label>
+                        <input type="range" min="0" max="1" step="0.01" value="${priorVal}"
+                            oninput="window._setPrior('${esc(p.id)}', this.value, this)" />
+                        <span class="edit-value">${priorVal.toFixed(2)}</span>
+                    </div>
+                    <div class="edit-row">
+                        <label>Temp${hasTempOverride ? ' ✎' : ''}</label>
+                        <input type="range" min="0" max="3" step="0.05" value="${tempVal}"
+                            oninput="window._setTemp('${esc(p.id)}', this.value, this)" />
+                        <span class="edit-value">${tempVal.toFixed(2)}</span>
+                    </div>
+                    ${(hasPriorOverride || hasTempOverride)
+                        ? `<button onclick="window._resetOverride('${esc(p.id)}')"
+                            style="margin-top:4px;font-size:11px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:3px 8px;border-radius:4px;cursor:pointer">Reset</button>`
+                        : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[c])); }
+
+        function render(data) {
+            state = data;
+            renderSummary(data);
+            renderTimeline(data);
+            renderProposals(data);
+            renderOverrides(data);
+        }
+
+        // SSE connection
+        function connect() {
+            el.statusDot.className = 'status-dot idle';
+            el.statusText.textContent = 'Connecting...';
+
+            const es = new EventSource(basePath + '/api/events');
+
+            es.onopen = () => {
+                el.statusDot.className = 'status-dot running';
+                el.statusText.textContent = 'Connected';
+            };
+
+            es.onmessage = (evt) => {
+                try {
+                    const data = JSON.parse(evt.data);
+
+                    // Update status based on state
+                    if (data.stopReason) {
+                        el.statusDot.className = 'status-dot stopped';
+                        el.statusText.textContent = 'Stopped: ' + data.stopReason;
+                    } else if (data.activeProposalId) {
+                        el.statusDot.className = 'status-dot running';
+                        el.statusText.textContent = 'Running';
+                    } else {
+                        el.statusDot.className = 'status-dot idle';
+                        el.statusText.textContent = 'Idle';
+                    }
+
+                    // Fetch full state for timeline history
+                    fetch(basePath + '/api/state')
+                        .then(r => r.json())
+                        .then(render);
+                } catch (e) {
+                    console.error('Parse error:', e);
+                }
+            };
+
+            es.onerror = () => {
+                el.statusDot.className = 'status-dot stopped';
+                el.statusText.textContent = 'Disconnected';
+                es.close();
+                setTimeout(connect, 3000);
+            };
+        }
+
+        // Global handlers
+        window._selectTick = function(tickNum) {
+            selectedTick = selectedTick === tickNum ? null : tickNum;
+            if (state) render(state);
+        };
+
+        window._setPrior = function(id, val, input) {
+            const numVal = parseFloat(val);
+            input.nextElementSibling.textContent = numVal.toFixed(2);
+            fetch(basePath + '/api/overrides/prior', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proposalId: id, value: numVal })
+            });
+        };
+
+        window._setTemp = function(id, val, input) {
+            const numVal = parseFloat(val);
+            input.nextElementSibling.textContent = numVal.toFixed(2);
+            fetch(basePath + '/api/overrides/temperature', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proposalId: id, value: numVal })
+            });
+        };
+
+        window._resetOverride = function(id) {
+            fetch(basePath + '/api/overrides/' + encodeURIComponent(id), { method: 'DELETE' });
+        };
+
+        // Initial load
+        fetch(basePath + '/api/state')
+            .then(r => r.json())
+            .then(render)
+            .catch(() => {});
+
+        connect();
+    })();
+    </script>
+</body>
+</html>
