@@ -22,6 +22,7 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 - 🔌 **Pluggable Architecture** - Sensors, modules, and considerations are fully extensible
 - 📊 **Built-in Observability** - Sinks for logging, metrics, and testing
 - 🧪 **Well Tested** - 197 comprehensive tests covering all core functionality
+- 💾 **Memory Management** - Two-tier memory with automatic archival from EventBus to long-term storage
 - 📚 **Production Ready** - Thread-safe, documented, with integration guides
 
 ---
@@ -176,6 +177,7 @@ public class QueryModule : ICapabilityModule
 - **[Observability](./docs/ARCHITECTURE.md#8-observability-iorchestrationSink)** - Monitoring and debugging
 
 ### Advanced Topics
+- **[Memory Management](./src/UtilityAi/Memory/README.md)** - Long-term memory storage, querying, and automatic archival
 - **[Multi-Agent Coordination](./docs/INTEGRATION.md#multi-agent-coordination)** - Patterns for agent collaboration
 - **[State Persistence](./docs/INTEGRATION.md#state-persistence)** - Saving and restoring orchestration state
 - **[LLM Integration](./docs/INTEGRATION.md#llm-integration)** - Examples for OpenAI, Anthropic, Azure
@@ -326,6 +328,67 @@ utility = prior × (geometric_mean_of_considerations)^temperature
 ```
 
 [Learn more →](./docs/ARCHITECTURE.md#5-proposals)
+
+---
+
+### 5️⃣ Memory Management
+
+Two-tier memory architecture: **EventBus** provides fast short-term storage (last 100 events per type), while **IMemoryStore** offers long-term retention with flexible querying. The **MemorySensor** automatically archives old EventBus facts to long-term storage.
+
+```
+┌──────────────────────────────────────┐
+│         EventBus (Short-term)        │
+│    Recent facts (last 100 items)     │
+└────────────┬─────────────────────────┘
+             │
+             │ MemorySensor archives old facts
+             │
+             ▼
+┌──────────────────────────────────────┐
+│      IMemoryStore (Long-term)        │
+│   Historical facts (unlimited)       │
+└──────────────────────────────────────┘
+```
+
+**Store and recall facts with `InMemoryStore`:**
+
+```csharp
+using UtilityAi.Memory;
+
+var store = new InMemoryStore();
+
+// Store a fact with timestamp
+await store.StoreAsync(new UserMessage("Hello"), DateTimeOffset.UtcNow);
+
+// Recall recent facts
+var query = new MemoryQuery
+{
+    TimeWindow = TimeSpan.FromHours(1),
+    MaxResults = 10,
+    SortOrder = SortOrder.NewestFirst
+};
+var memories = await store.RecallAsync<UserMessage>(query);
+
+// Prune old data (remove facts older than 7 days)
+await store.PruneAsync(TimeSpan.FromDays(7));
+```
+
+**Automatic archival with `MemorySensor`:**
+
+```csharp
+var memoryStore = new InMemoryStore();
+var orchestrator = new UtilityAiOrchestrator(bus: bus)
+    .AddSensor(new MemorySensor(
+        store: memoryStore,
+        archiveThreshold: TimeSpan.FromMinutes(10),
+        typeof(UserMessage), typeof(AssistantMessage)
+    ))
+    .AddModule(new MyModule());
+```
+
+**Use Cases:** Long conversational history for LLMs • Analytics & reporting • Audit logging • User personalization
+
+[Learn more →](./src/UtilityAi/Memory/README.md)
 
 ---
 
