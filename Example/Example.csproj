@@ -5,10 +5,23 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- Exclude separate example projects -->
+      <Compile Remove="SmartHomeAgent\**" />
+      <EmbeddedResource Remove="SmartHomeAgent\**" />
+      <None Remove="SmartHomeAgent\**" />
+
+      <Compile Remove="Example.LLM.ChatBot\**" />
+      <EmbeddedResource Remove="Example.LLM.ChatBot\**" />
+      <None Remove="Example.LLM.ChatBot\**" />
     </ItemGroup>
 
 </Project>

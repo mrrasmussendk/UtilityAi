@@ -1,4 +1,4 @@
-namespace UtilityAi.Capabilities;
+namespace UtilityAi.Consideration.Attributes;
 
 /// <summary>
 /// Declares a consideration with a specific weight for declarative utility calculation.
