@@ -1,7 +1,7 @@
 # 🧠 UtilityAI Framework (.NET 8)
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
-[![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)](./Tests/)
+[![Tests](https://img.shields.io/badge/tests-138%20passing-brightgreen)](./Tests/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A lightweight, modular framework for building AI agent orchestration systems using classic **Utility AI** decision-making patterns. The framework scores candidate actions each tick and executes the highest-utility option based on current context—no hardcoded workflows required.
@@ -13,13 +13,13 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 ## ✨ Features
 
 - 🎯 **Utility-Based Decision Making** - Actions compete based on dynamic scoring
-- 🏷️ **Attribute-Based Registration** (NEW!) - Java-style annotations for declarative module configuration
+- 🏷️ **Attribute-Based Registration** - Java-style annotations for declarative module configuration
 - 📝 **Event History** - Access timestamped event history for LLM conversation context
 - 🔔 **Type-Safe Subscriptions** - React to events with callbacks
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
 - 🔌 **Pluggable Architecture** - Sensors, modules, and considerations are fully extensible
 - 📊 **Built-in Observability** - Sinks for logging, metrics, and testing
-- 🧪 **Well Tested** - 69 comprehensive tests covering all core functionality
+- 🧪 **Well Tested** - 138 comprehensive tests covering all core functionality
 - 📚 **Production Ready** - Thread-safe, documented, with integration guides
 
 ---
@@ -30,7 +30,7 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 
 ```bash
 # Clone or download the repository
-git clone https://github.com/yourusername/UtilityAi.git
+git clone https://github.com/mrrasmussendk/UtilityAi.git
 cd UtilityAi
 
 # Build and test
@@ -57,7 +57,7 @@ var intent = new UserIntent(new IntentGoal("my-goal"));
 await orchestrator.RunAsync(intent, maxTicks: 10, CancellationToken.None);
 ```
 
-### 🆕 Attribute-Based Registration (Java-Style Annotations)
+### Attribute-Based Registration
 
 ```csharp
 using UtilityAi.Capabilities;
@@ -318,7 +318,7 @@ public async Task Orchestrator_ChoosesHighestUtility()
 }
 ```
 
-69 tests covering all core functionality. Run with:
+138 tests covering all core functionality. Run with:
 ```bash
 dotnet test
 ```
@@ -335,11 +335,11 @@ UtilityAi/
 │   ├── Utils/              # EventBus, Runtime
 │   ├── Orchestration/      # UtilityAiOrchestrator, OrchestratorExtensions
 │   ├── Sensor/             # ISensor interface
-│   ├── Capabilities/       # ICapabilityModule, Attributes (NEW!)
+│   ├── Capabilities/       # ICapabilityModule, Attributes
 │   ├── Consideration/      # Proposal, IConsideration, built-in considerations
 │   └── Evaluators/         # Response curves (Logistic, Power, etc.)
 ├── Example/                # Complete task management demo (manual + attributes)
-├── Tests/                  # 69 comprehensive tests
+├── Tests/                  # 138 comprehensive tests
 └── docs/                   # Architecture and integration guides
 ```
 
@@ -396,8 +396,8 @@ Built with inspiration from:
 ## 📞 Support
 
 - 📖 [Documentation](./docs/)
-- 💬 [Issues](https://github.com/yourusername/UtilityAi/issues)
-- 📧 [Discussions](https://github.com/yourusername/UtilityAi/discussions)
+- 💬 [Issues](https://github.com/mrrasmussendk/UtilityAi/issues)
+- 📧 [Discussions](https://github.com/mrrasmussendk/UtilityAi/discussions)
 
 ---
 
