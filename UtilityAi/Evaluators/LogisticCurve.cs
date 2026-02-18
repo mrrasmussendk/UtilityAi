@@ -46,6 +46,10 @@
             double L2 = Math.Log(z2 / (1 - z2));
 
             double k = (L1 - L2) / (a.x - b.x);
+            
+            if (Math.Abs(k) < 1e-12)
+                throw new ArgumentException("Anchors must have distinct y values relative to their x separation.");
+            
             double x0 = a.x - L1 / k;
 
             return new LogisticCurve(domain, outR, k, x0);

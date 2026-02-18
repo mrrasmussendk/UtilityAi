@@ -157,7 +157,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     private (Proposal chosen, double utility)? ChooseAndMaybeStopAtZero(Runtime rt, List<(Proposal p, double u)> scored, IOrchestrationSink sink, bool stopAtZero)
     {
         var chosen = _selector.Select(scored.Select(x => (x.p, x.u)).ToList(), rt);
-        var chosenUtility = scored.First(x => ReferenceEquals(x.p, chosen)).u;
+        var chosenUtility = scored.FirstOrDefault(x => ReferenceEquals(x.p, chosen)).u;
 
         if (stopAtZero && chosenUtility == 0)
         {

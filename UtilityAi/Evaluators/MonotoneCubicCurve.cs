@@ -79,7 +79,7 @@
             // Interior tangents: weighted harmonic mean if slopes have same sign
             for (int i = 1; i < n - 1; i++)
             {
-                if (d[i - 1] * d[i] <= 0)
+                if (d[i - 1] * d[i] <= 0 || Math.Abs(d[i - 1]) < 1e-12 || Math.Abs(d[i]) < 1e-12)
                 {
                     m[i] = 0;
                 }
