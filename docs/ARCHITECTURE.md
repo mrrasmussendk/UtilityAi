@@ -50,17 +50,17 @@ The `EventBus` is the central state container. It's a type-safe publish/subscrib
 bus.Publish(new UserMessage("Hello"));
 var msg = bus.GetOrDefault<UserMessage>();
 
-// History access (NEW in v2)
+// History access
 var history = bus.GetHistory<UserMessage>(maxItems: 10);
 foreach (var evt in history)
     Console.WriteLine($"{evt.Timestamp}: {evt.Value.Text}");
 
-// Subscriptions (NEW in v2)
+// Subscriptions
 using var sub = bus.Subscribe<UserMessage>(msg => {
     Console.WriteLine($"New message: {msg.Text}");
 });
 
-// Scoping (NEW in v2)
+// Scoping
 var agentBus = bus.CreateScope("agent-1");
 agentBus.Publish(new AgentState("busy")); // Isolated to this scope
 agentBus.TryGetWithFallback<GlobalConfig>(out var config); // Falls back to parent
