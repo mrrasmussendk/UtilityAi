@@ -83,4 +83,26 @@ public class MonotoneCubicCurveTests
             }
         }
     }
+
+    [Fact]
+    public void MonotoneCubic_HandlesIdenticalConsecutiveY()
+    {
+        // Test for Bug #2: Division by zero when consecutive keypoints have identical y-values
+        // This should not crash - the tangent computation should handle near-zero slopes
+        var keys = new[]
+        {
+            (t: 0.0, v: 0.5),
+            (t: 1.0, v: 0.5),  // Same y as previous
+            (t: 2.0, v: 1.0)
+        };
+        
+        var curve = new MonotoneCubicCurve(keys, output: new UtilityAi.Evaluators.Range(0, 1));
+        
+        // Should not crash and should produce valid values
+        var y = curve.Evaluate(0.5);
+        Assert.InRange(y, 0.5 - 1e-9, 0.5 + 1e-9);
+        
+        var y2 = curve.Evaluate(1.5);
+        Assert.InRange(y2, 0.5, 1.0);
+    }
 }
