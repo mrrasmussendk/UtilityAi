@@ -81,9 +81,10 @@ public sealed class EventBus : IDisposable
                     {
                         (handler as Action<T>)?.Invoke(msg);
                     }
-                    catch
+                    catch (Exception)
                     {
                         // Swallow subscriber exceptions to prevent cascading failures
+                        // Note: All exceptions are caught to ensure stability
                     }
                 }
             }

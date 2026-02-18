@@ -61,4 +61,19 @@ public class LogisticCurveTests
         // same x is invalid
         Assert.Throws<ArgumentException>(() => LogisticCurve.FitFromAnchors((0.5, 0.2), (0.5, 0.8), domain, output));
     }
+
+    [Fact]
+    public void LogisticCurve_FitFromAnchors_ThrowsForNearEqualY()
+    {
+        // Test for Bug #5: Division by zero when anchor y values result in near-zero k
+        var domain = new UtilityAi.Evaluators.Range(0, 1);
+        var output = new UtilityAi.Evaluators.Range(0, 1);
+        
+        // When y values result in k being very close to zero (L1 ≈ L2)
+        // We need y values that when normalized produce nearly identical logit values
+        // For example, y values very close together near the center of the range
+        var epsilon = 1e-15;
+        Assert.Throws<ArgumentException>(() => 
+            LogisticCurve.FitFromAnchors((0.2, 0.5), (0.8, 0.5 + epsilon), domain, output));
+    }
 }
