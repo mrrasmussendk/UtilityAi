@@ -1,19 +1,23 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi", "UtilityAi\UtilityAi.csproj", "{E2302B4B-73D5-4DEE-AB4D-0804622E1791}"
+#
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi", "src\UtilityAi\UtilityAi.csproj", "{E2302B4B-73D5-4DEE-AB4D-0804622E1791}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example", "Example\Example.csproj", "{3DE9D380-D81C-4D4E-9755-2054054ED607}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests\Tests.csproj", "{83C01D79-3A37-4A91-B480-7D5DB4B30B74}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{83C01D79-3A37-4A91-B480-7D5DB4B30B74}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.Dashboard", "tools\UtilityAi.Dashboard\UtilityAi.Dashboard.csproj", "{DF90141D-4FE1-423C-B203-D6A10E4B3475}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.Dashboard", "UtilityAi.Dashboard\UtilityAi.Dashboard.csproj", "{DF90141D-4FE1-423C-B203-D6A10E4B3475}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.Dashboard.Tests", "tools\UtilityAi.Dashboard.Tests\UtilityAi.Dashboard.Tests.csproj", "{8FCF29C8-F783-4C26-89A6-74740771051B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.Dashboard.Tests", "UtilityAi.Dashboard.Tests\UtilityAi.Dashboard.Tests.csproj", "{8FCF29C8-F783-4C26-89A6-74740771051B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.Maf", "integrations\UtilityAi.Maf\UtilityAi.Maf.csproj", "{EDEC34B9-EF0B-44E5-8C18-FCF3718AF842}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.Maf", "UtilityAi.Maf\UtilityAi.Maf.csproj", "{EDEC34B9-EF0B-44E5-8C18-FCF3718AF842}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.LLM.Abstractions", "integrations\UtilityAi.LLM.Abstractions\UtilityAi.LLM.Abstractions.csproj", "{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.Maf", "Example.Maf\Example.Maf.csproj", "{943F1022-E5B1-42B5-ABF2-0C96A60BC2BF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.LLM.OpenAI", "integrations\UtilityAi.LLM.OpenAI\UtilityAi.LLM.OpenAI.csproj", "{B2C3D4E5-F6A7-4B5C-8D9E-0F1A2B3C4D5E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example", "examples\Example\Example.csproj", "{3DE9D380-D81C-4D4E-9755-2054054ED607}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.Maf", "examples\Example.Maf\Example.Maf.csproj", "{943F1022-E5B1-42B5-ABF2-0C96A60BC2BF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,10 +29,6 @@ Global
 		{E2302B4B-73D5-4DEE-AB4D-0804622E1791}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E2302B4B-73D5-4DEE-AB4D-0804622E1791}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E2302B4B-73D5-4DEE-AB4D-0804622E1791}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Release|Any CPU.Build.0 = Release|Any CPU
 		{83C01D79-3A37-4A91-B480-7D5DB4B30B74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{83C01D79-3A37-4A91-B480-7D5DB4B30B74}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83C01D79-3A37-4A91-B480-7D5DB4B30B74}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -45,6 +45,18 @@ Global
 		{EDEC34B9-EF0B-44E5-8C18-FCF3718AF842}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EDEC34B9-EF0B-44E5-8C18-FCF3718AF842}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EDEC34B9-EF0B-44E5-8C18-FCF3718AF842}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-4A5B-8C9D-0E1F2A3B4C5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C3D4E5-F6A7-4B5C-8D9E-0F1A2B3C4D5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3D4E5-F6A7-4B5C-8D9E-0F1A2B3C4D5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3D4E5-F6A7-4B5C-8D9E-0F1A2B3C4D5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3D4E5-F6A7-4B5C-8D9E-0F1A2B3C4D5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DE9D380-D81C-4D4E-9755-2054054ED607}.Release|Any CPU.Build.0 = Release|Any CPU
 		{943F1022-E5B1-42B5-ABF2-0C96A60BC2BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{943F1022-E5B1-42B5-ABF2-0C96A60BC2BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{943F1022-E5B1-42B5-ABF2-0C96A60BC2BF}.Release|Any CPU.ActiveCfg = Release|Any CPU

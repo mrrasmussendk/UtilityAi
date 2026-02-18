@@ -1,23 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <RootNamespace>UtilityAi.Maf</RootNamespace>
 
         <!-- NuGet metadata -->
-        <PackageId>UtilityAi.Maf</PackageId>
-        <Version>1.0.0</Version>
-        <Title>UtilityAI Framework - Microsoft Agent Framework Integration</Title>
-        <Description>Integration layer between UtilityAI orchestration framework and Microsoft Agent Framework (MAF). Enables utility-based decision-making to select and orchestrate MAF agents.</Description>
+        <PackageId>UtilityAi</PackageId>
+        <Version>1.1.4</Version>
+        <Title>UtilityAI Framework - AI Agent Orchestration</Title>
+        <Description>Lightweight framework for building AI agent orchestration systems using Utility AI patterns. Features event history, subscriptions, scoped state for multi-agent coordination, and comprehensive documentation.</Description>
         <Authors>Marc Rasmussen</Authors>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/mrrasmussendk/UtilityAi</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageProjectUrl>https://github.com/mrrasmussendk/UtilityAi</PackageProjectUrl>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>utility-ai;ai;agent;orchestration;maf;microsoft-agent-framework;dotnet;csharp</PackageTags>
+        <PackageTags>utility-ai;ai;agent;orchestration;decision-making;llm;multi-agent;ai-framework;dotnet;csharp</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
         <!-- Build determinism & source info -->
@@ -26,26 +25,22 @@
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
 
-        <!-- Symbols -->
+        <!-- Symbols (optional but recommended). If you enable, also push the .snupkg -->
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="../README.md" Pack="true" PackagePath="/" />
+        <None Include="../../README.md" Pack="true" PackagePath="/" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="Microsoft.Agents.AI.Abstractions" Version="1.0.0-preview.260212.1" />
+        <!-- Add SourceLink to improve debugging experience for consumers -->
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
 
-    <PropertyGroup>
-        <NoWarn>1591;1572;1573;1734</NoWarn>
-    </PropertyGroup>
-
+  <PropertyGroup>
+    <!-- Suppress XML doc warnings and related doc-comment mismatches for public API -->
+    <NoWarn>1591;1572;1573;1734</NoWarn>
+  </PropertyGroup>
 </Project>

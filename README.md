@@ -1,7 +1,7 @@
 # 🧠 UtilityAI Framework (.NET 8)
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
-[![Tests](https://img.shields.io/badge/tests-69%20passing-brightgreen)](./Tests/)
+[![Tests](https://img.shields.io/badge/tests-197%20passing-brightgreen)](./Tests/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A lightweight, modular framework for building AI agent orchestration systems using classic **Utility AI** decision-making patterns. The framework scores candidate actions each tick and executes the highest-utility option based on current context—no hardcoded workflows required.
@@ -13,14 +13,15 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 ## ✨ Features
 
 - 🎯 **Utility-Based Decision Making** - Actions compete based on dynamic scoring
-- 🏷️ **Attribute-Based Registration** (NEW!) - Java-style annotations for declarative module configuration
-- 🔗 **Microsoft Agent Framework (MAF) Integration** (NEW!) - Utility-based orchestration of MAF agents
+- 🧠 **LLM Intent Interpretation** (NEW!) - Use LLMs to analyze user messages and publish structured facts - the utility system does the rest
+- 🏷️ **Attribute-Based Registration** - Java-style annotations for declarative module configuration
+- 🔗 **Microsoft Agent Framework (MAF) Integration** - Utility-based orchestration of MAF agents
 - 📝 **Event History** - Access timestamped event history for LLM conversation context
 - 🔔 **Type-Safe Subscriptions** - React to events with callbacks
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
 - 🔌 **Pluggable Architecture** - Sensors, modules, and considerations are fully extensible
 - 📊 **Built-in Observability** - Sinks for logging, metrics, and testing
-- 🧪 **Well Tested** - 69 comprehensive tests covering all core functionality
+- 🧪 **Well Tested** - 197 comprehensive tests covering all core functionality
 - 📚 **Production Ready** - Thread-safe, documented, with integration guides
 
 ---
@@ -107,6 +108,55 @@ await orchestrator.RunAsync(intent, maxTicks: 5, CancellationToken.None);
 **Benefits:** Utility scoring selects agents • Multi-agent workflows emerge naturally • Agent results flow via EventBus
 
 See the [Example.Maf](./Example.Maf/) project and [MAF Integration Guide](./docs/INTEGRATION.md#microsoft-agent-framework-maf-integration) for details.
+
+### 🆕 LLM Intent Interpretation
+
+Bootstrap your agent with intelligent intent analysis - let the LLM interpret user messages into structured facts, then let the utility system naturally react:
+
+```csharp
+using UtilityAi.Sensor.LLM;
+
+// 1. Create LLM client adapter
+public class YourLlmAdapter : ILlmClient
+{
+    private readonly ILanguageModel _llm;
+
+    public async Task<string> GenerateAsync(string prompt, CancellationToken ct)
+    {
+        return await _llm.GenerateAsync(prompt, ct);
+    }
+}
+
+// 2. Add intent sensor
+var llmClient = new YourLlmAdapter();
+var orchestrator = new UtilityAiOrchestrator(bus: bus)
+    .AddSensor(LlmIntentSensor.ForMessageType<UserMessage>(
+        llmClient,
+        msg => msg.Text  // Extract text from your message type
+    ))
+    .AddModule(new YourModule());
+
+// 3. Modules react to published IntentAnalysis facts
+public class QueryModule : ICapabilityModule
+{
+    public IEnumerable<Proposal> Propose(Runtime rt)
+    {
+        var analysis = rt.Bus.GetOrDefault<IntentAnalysis>();
+
+        yield return ProposalHelper.For("execute-query")
+            .WithConsideration(new SignalConsideration<IntentAnalysis>(
+                "query-intent",
+                a => a.Intent.StartsWith("query.") ? 1.0 : 0.0,
+                x => x,
+                (0, 1)))
+            .WithAction(async ct => { /* execute query */ });
+    }
+}
+```
+
+**Flow:** User message → LLM extracts intent & entities → Facts published to EventBus → Utility system scores naturally → Right action executes
+
+**Benefits:** LLM doesn't pick actions (utility system does) • Natural integration with existing patterns • Clean separation of concerns
 
 ---
 

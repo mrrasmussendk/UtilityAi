@@ -57,18 +57,18 @@ jobs:
           echo "Using tag version: $VERSION"
         else
           # Use version from csproj for non-release builds
-          VERSION=$(grep -oP '<Version>\K[^<]+' ./UtilityAi/UtilityAi.csproj)
+          VERSION=$(grep -oP '<Version>\K[^<]+' ./src/UtilityAi/UtilityAi.csproj)
           echo "VERSION=$VERSION-preview.$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
           echo "Using preview version: $VERSION-preview.$(date +%Y%m%d%H%M%S)"
         fi
 
     - name: Pack UtilityAi
       if: github.event_name != 'pull_request'
-      run: dotnet pack ./UtilityAi/UtilityAi.csproj --configuration Release --no-build --output ./artifacts /p:Version=${{ steps.get_version.outputs.VERSION }}
+      run: dotnet pack ./src/UtilityAi/UtilityAi.csproj --configuration Release --no-build --output ./artifacts /p:Version=${{ steps.get_version.outputs.VERSION }}
 
     - name: Pack UtilityAi.Maf
       if: github.event_name != 'pull_request'
-      run: dotnet pack ./UtilityAi.Maf/UtilityAi.Maf.csproj --configuration Release --no-build --output ./artifacts /p:Version=${{ steps.get_version.outputs.VERSION }}
+      run: dotnet pack ./integrations/UtilityAi.Maf/UtilityAi.Maf.csproj --configuration Release --no-build --output ./artifacts /p:Version=${{ steps.get_version.outputs.VERSION }}
 
     - name: Upload artifacts
       if: github.event_name != 'pull_request'
