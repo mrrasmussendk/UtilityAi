@@ -29,7 +29,10 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 ### Installation
 
 ```bash
-# Clone or download the repository
+# Install via NuGet
+dotnet add package UtilityAi
+
+# Or clone and build from source
 git clone https://github.com/mrrasmussendk/UtilityAi.git
 cd UtilityAi
 
@@ -305,7 +308,7 @@ public async Task Orchestrator_ChoosesHighestUtility()
     var bus = new EventBus();
     bus.Publish(new UserMessage("test"));
 
-    var sink = new TestingSink();
+    var sink = new RecordingSink();
     var orch = new UtilityAiOrchestrator(bus: bus)
         .AddModule(new MyModule());
 
@@ -313,8 +316,8 @@ public async Task Orchestrator_ChoosesHighestUtility()
     await orch.RunAsync(new UserIntent("test"), maxTicks: 1, CancellationToken.None, sink);
 
     // Assert
-    Assert.Single(sink.ExecutedProposals);
-    Assert.Equal("my.action", sink.ExecutedProposals[0]);
+    Assert.Single(sink.Ticks);
+    Assert.Equal("my.action", sink.Ticks[0].Chosen.Id);
 }
 ```
 
@@ -337,7 +340,10 @@ UtilityAi/
 │   ├── Sensor/             # ISensor interface
 │   ├── Capabilities/       # ICapabilityModule, Attributes
 │   ├── Consideration/      # Proposal, IConsideration, built-in considerations
-│   └── Evaluators/         # Response curves (Logistic, Power, etc.)
+│   ├── Evaluators/         # Response curves (Logistic, Power, etc.)
+│   ├── Actions/            # IAction<TReq, TRes> interface
+│   ├── Goal/               # IGoal interface
+│   └── Helpers/            # OpenAI structured output builder
 ├── Example/                # Complete task management demo (manual + attributes)
 ├── Tests/                  # 138 comprehensive tests
 └── docs/                   # Architecture and integration guides
