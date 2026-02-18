@@ -134,4 +134,25 @@ public class EligibilityTests
         // Should return true when ID is not in stack
         Assert.True(eligibility.IsEligible(rt));
     }
+
+    [Fact]
+    public void HasFactEligible_Name_IncludesTypeName()
+    {
+        var eligibility = new HasFactEligible<int>();
+        Assert.Equal("HasFactEligible<Int32>", eligibility.Name);
+    }
+
+    [Fact]
+    public void NotHasFactEligible_Name_IncludesTypeName()
+    {
+        var eligibility = new NotHasFactEligible<string>();
+        Assert.Equal("NotHasFactEligible<String>", eligibility.Name);
+    }
+
+    [Fact]
+    public void NoRepeatEligible_Name_IsConstant()
+    {
+        var eligibility = new NoRepeatEligible("test-id");
+        Assert.Equal("NoRepeatEligible", eligibility.Name);
+    }
 }

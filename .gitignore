@@ -164,6 +164,8 @@ coverage*.xml
 coverage*.json
 *.opencover.xml
 *.lcov
+CoverageReport/
+TestResults/
 
 # Local Environment files
 .env
