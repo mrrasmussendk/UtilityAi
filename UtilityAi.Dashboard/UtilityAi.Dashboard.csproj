@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- NuGet metadata -->
+        <PackageId>UtilityAi.Dashboard</PackageId>
+        <Version>1.0.0</Version>
+        <Title>UtilityAI Dashboard - Real-Time Visualization</Title>
+        <Description>Optional extension for the UtilityAI framework that provides a real-time web dashboard to visualize actions, considerations, and state variables. Supports interactive editing of proposal parameters.</Description>
+        <Authors>Marc Rasmussen</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/mrrasmussendk/UtilityAi</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>utility-ai;dashboard;visualization;debugging;ai-agent</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <NoWarn>1591;1572;1573;1734</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="wwwroot\**\*" />
+    </ItemGroup>
+
+</Project>
