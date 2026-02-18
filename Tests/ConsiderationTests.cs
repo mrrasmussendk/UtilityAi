@@ -31,8 +31,8 @@ public class ConsiderationTests
     [Fact]
     public void HasFact_Name_IncludesTypeName()
     {
-        var cons = new HasFact<int>(true);
-        Assert.Equal("has:Int32", cons.Name);
+        var cons = new HasFact<int>();
+        Assert.Equal("HasFact<Int32>", cons.Name);
     }
 
     private sealed record Sig(double V);
