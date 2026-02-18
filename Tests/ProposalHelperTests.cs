@@ -36,7 +36,7 @@ public class ProposalHelperTests
     [Fact]
     public void ProposalBuilder_WithConsideration_AddsConsideration()
     {
-        var consideration = new HasFact<int>(true);
+        var consideration = new HasFact<int>();
         var proposal = ProposalHelper.For("test")
             .WithConsideration(consideration)
             .WithAction(_ => Task.CompletedTask)
@@ -145,7 +145,7 @@ public class ProposalHelperTests
     public void ProposalBuilder_FluentChaining_WorksCorrectly()
     {
         var proposal = ProposalHelper.For("chained")
-            .WithConsideration(new HasFact<int>(true))
+            .WithConsideration(new HasFact<int>())
             .WithValue("fixed", 0.8)
             .WithEligibility(new HasFactEligible<string>())
             .WithPrior(0.9)

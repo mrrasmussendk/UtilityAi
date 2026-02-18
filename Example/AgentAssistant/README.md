@@ -137,7 +137,27 @@ Tick 1: DoResearchModule.web_search wins → Searches web for weather
 Tick 2: SendMessageModule.direct wins → Sends response with weather data
 ```
 
+## Response Curves & Tie-Breaking
+
+This example demonstrates **proper use of response curves** to avoid unintentional utility ties:
+
+- **Quadratic curves** (`x => x * x`) - Reward high confidence, penalize medium
+- **Cubic curves** (`x => Math.Pow(x, 3)`) - Only trigger on extreme values
+- **Logistic S-curves** - Smooth thresholds for rate limiting
+- **Square root** (`x => Math.Sqrt(x)`) - Diminishing returns
+
+**Without curves**, proposals tie at 1.0 utility and behavior becomes unpredictable!
+
+### Built-in Selection Strategies
+
+The framework includes selection strategies for intentional ties (available in `UtilityAi.Orchestration.SelectionStrategies`):
+- **`RandomSelectionStrategy`** - Randomly pick among tied proposals (A/B testing, exploration)
+- **`RoundRobinSelectionStrategy`** - Rotate through ties (load balancing)
+
+See [CURVES_AND_TIES.md](./CURVES_AND_TIES.md) for comprehensive guide!
+
 ## See Also
 
+- [CURVES_AND_TIES.md](./CURVES_AND_TIES.md) - **Response curves and tie-breaking guide**
 - [PROPOSAL_PATTERNS.md](../../docs/PROPOSAL_PATTERNS.md) - Detailed guide on correct patterns
 - [INTEGRATION.md](../../docs/INTEGRATION.md) - How to integrate with real LLM APIs

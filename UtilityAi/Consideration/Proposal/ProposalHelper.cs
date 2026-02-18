@@ -25,6 +25,7 @@ public sealed class ProposalBuilder
     private Func<CancellationToken, Task>? _action;
     private double _prior = 1.0;
     private double _temperature = 1.0;
+    private string? _description;
 
     internal ProposalBuilder(string id)
     {
@@ -86,6 +87,16 @@ public sealed class ProposalBuilder
     }
 
     /// <summary>
+    /// Sets a human-readable description of what this action does.
+    /// Useful for LLM planning, debugging, and introspection.
+    /// </summary>
+    public ProposalBuilder WithDescription(string description)
+    {
+        _description = description;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the proposal.
     /// </summary>
     public Proposal Build()
@@ -101,7 +112,8 @@ public sealed class ProposalBuilder
         )
         {
             Prior = _prior,
-            Temperature = _temperature
+            Temperature = _temperature,
+            Description = _description
         };
     }
 

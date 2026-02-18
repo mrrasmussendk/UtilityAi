@@ -1,5 +1,6 @@
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
+using UtilityAi.Consideration.Attributes;
 using Xunit;
 
 namespace Tests;
