@@ -105,4 +105,22 @@ public class MonotoneCubicCurveTests
         var y2 = curve.Evaluate(1.5);
         Assert.InRange(y2, 0.5, 1.0);
     }
+
+    [Fact]
+    public void MonotoneCubic_Properties_ReturnCorrectValues()
+    {
+        var keys = new[]
+        {
+            (t: 0.0, v: 0.0),
+            (t: 1.0, v: 1.0)
+        };
+        var domain = new UtilityAi.Evaluators.Range(0, 1);
+        var output = new UtilityAi.Evaluators.Range(0, 1);
+        var curve = new MonotoneCubicCurve(keys, domain, output);
+        
+        Assert.Equal(domain, curve.Domain);
+        Assert.Equal(output, curve.Output);
+        Assert.NotNull(curve.Keys);
+        Assert.Equal(2, curve.Keys.Count);
+    }
 }

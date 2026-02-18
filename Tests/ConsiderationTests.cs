@@ -28,6 +28,13 @@ public class ConsiderationTests
         Assert.Equal(0.0, cons.Evaluate(rt));
     }
 
+    [Fact]
+    public void HasFact_Name_IncludesTypeName()
+    {
+        var cons = new HasFact<int>(true);
+        Assert.Equal("has:Int32", cons.Name);
+    }
+
     private sealed record Sig(double V);
 
     [Fact]
@@ -41,5 +48,12 @@ public class ConsiderationTests
         Assert.Equal(1.0, c.Evaluate(rt));
         bus.Publish(new Sig(-1));
         Assert.Equal(0.0, c.Evaluate(rt));
+    }
+
+    [Fact]
+    public void CurveSignal_Name_IsSetCorrectly()
+    {
+        var c = new CurveSignal<Sig>("test-signal", s => s.V, v => v);
+        Assert.Equal("test-signal", c.Name);
     }
 }

@@ -63,4 +63,22 @@ public class PiecewiseLinearCurveTests
         Assert.InRange(curve.Evaluate(0.0001), 0.0, 0.1);
         Assert.InRange(curve.Evaluate(0.9999), 0.9, 1.0);
     }
+
+    [Fact]
+    public void Piecewise_Properties_ReturnCorrectValues()
+    {
+        var keys = new[]
+        {
+            (t: 0.0, v: 0.0),
+            (t: 1.0, v: 1.0)
+        };
+        var domain = new UtilityAi.Evaluators.Range(0, 1);
+        var output = new UtilityAi.Evaluators.Range(0, 1);
+        var curve = new PiecewiseLinearCurve(keys, domain, output);
+        
+        Assert.Equal(domain, curve.Domain);
+        Assert.Equal(output, curve.Output);
+        Assert.NotNull(curve.Keys);
+        Assert.Equal(2, curve.Keys.Count);
+    }
 }
