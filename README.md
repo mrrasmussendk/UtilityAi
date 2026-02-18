@@ -14,6 +14,7 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 
 - 🎯 **Utility-Based Decision Making** - Actions compete based on dynamic scoring
 - 🏷️ **Attribute-Based Registration** - Java-style annotations for declarative module configuration
+- 🔗 **Microsoft Agent Framework (MAF) Integration** - Utility-based orchestration of MAF agents
 - 📝 **Event History** - Access timestamped event history for LLM conversation context
 - 🔔 **Type-Safe Subscriptions** - React to events with callbacks
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
@@ -84,14 +85,41 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
 
 See the [Example](./Example/) project for a complete demo comparing both approaches.
 
+### Microsoft Agent Framework (MAF) Integration
+
+Use UtilityAI to orchestrate [MAF agents](https://learn.microsoft.com/en-us/agent-framework/) with utility-based decision-making:
+
+```csharp
+using Microsoft.Agents.AI;
+using UtilityAi.Maf;
+using UtilityAi.Orchestration;
+
+// Register MAF agents with the orchestrator
+var orchestrator = new UtilityAiOrchestrator(bus: bus)
+    .AddMafAgentSensor(
+        new MafAgentRegistration("research", researchAgent),
+        new MafAgentRegistration("writer", writerAgent))
+    .AddMafAgent(researchAgent, "research",
+        considerations: new IConsideration[] { new MafAgentAvailable("research") })
+    .AddMafAgent(writerAgent, "writer",
+        considerations: new IConsideration[] { new HasMafAgentResult("research") });
+
+await orchestrator.RunAsync(intent, maxTicks: 5, CancellationToken.None);
+```
+
+**Benefits:** Utility scoring selects agents • Multi-agent workflows emerge naturally • Agent results flow via EventBus
+
+See the [Example.Maf](./Example.Maf/) project and [MAF Integration Guide](./docs/INTEGRATION.md#microsoft-agent-framework-maf-integration) for details.
+
 ---
 
 ## 📚 Documentation
 
 ### Getting Started
 - **[Architecture Guide](./docs/ARCHITECTURE.md)** - Understanding the framework design and patterns
-- **[Integration Guide](./docs/INTEGRATION.md)** - Connect to OpenAI, Anthropic, Azure AI, and more
+- **[Integration Guide](./docs/INTEGRATION.md)** - Connect to MAF, OpenAI, Anthropic, Azure AI, and more
 - **[Example Project](./Example/)** - Complete working task management system
+- **[MAF Example](./Example.Maf/)** - Microsoft Agent Framework integration demo
 
 ### Core Concepts
 - **[EventBus Patterns](./docs/ARCHITECTURE.md#1-eventbus-blackboard-pattern)** - History, subscriptions, and scoping
@@ -344,7 +372,9 @@ UtilityAi/
 │   ├── Actions/            # IAction<TReq, TRes> interface
 │   ├── Goal/               # IGoal interface
 │   └── Helpers/            # OpenAI structured output builder
+├── UtilityAi.Maf/          # Microsoft Agent Framework integration
 ├── Example/                # Complete task management demo (manual + attributes)
+├── Example.Maf/            # MAF integration demo
 ├── Tests/                  # 138 comprehensive tests
 └── docs/                   # Architecture and integration guides
 ```
@@ -395,7 +425,7 @@ Built with inspiration from:
 - **Utility AI** pattern from game development
 - **Blackboard pattern** from classical AI
 - **Java Annotations** (Spring Framework, Jakarta EE)
-- Modern agent orchestration needs (Microsoft Semantic Kernel, AutoGen, LangGraph)
+- Modern agent orchestration needs (Microsoft Agent Framework, Semantic Kernel, AutoGen, LangGraph)
 
 ---
 
