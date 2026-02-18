@@ -28,10 +28,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
-      <ProjectReference Include="..\UtilityAi.Maf\UtilityAi.Maf.csproj" />
-      <ProjectReference Include="..\Example\Example.csproj" />
-      <ProjectReference Include="..\Example.Maf\Example.Maf.csproj" />
+      <ProjectReference Include="..\..\src\UtilityAi\UtilityAi.csproj" />
+      <ProjectReference Include="..\..\integrations\UtilityAi.Maf\UtilityAi.Maf.csproj" />
+      <ProjectReference Include="..\..\examples\Example\Example.csproj" />
+      <ProjectReference Include="..\..\examples\Example.Maf\Example.Maf.csproj" />
     </ItemGroup>
 
 </Project>

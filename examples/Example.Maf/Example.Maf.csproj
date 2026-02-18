@@ -8,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
-        <ProjectReference Include="..\UtilityAi.Maf\UtilityAi.Maf.csproj" />
+        <ProjectReference Include="..\..\src\UtilityAi\UtilityAi.csproj" />
+        <ProjectReference Include="..\..\integrations\UtilityAi.Maf\UtilityAi.Maf.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -859,6 +859,198 @@ For a Slack bot that DMs users:
 
 ---
 
+## 🧠 LLM Intent Interpretation (Chat Applications)
+
+### The Problem
+
+In chat applications, you need to:
+1. Understand what the user wants (intent interpretation)
+2. Bootstrap the utility system with the right initial state
+3. Let the system naturally react to execute the right actions
+
+**Naive approach (WRONG):** Ask LLM "what action should I execute?" → LLM picks action IDs → Bypasses utility system
+
+**Correct approach:** LLM interprets intent and publishes facts → Utility system scores naturally → Right action wins
+
+### The Solution: LlmIntentSensor
+
+```csharp
+using UtilityAi.Sensor.LLM;
+
+// 1. Implement ILlmClient adapter for your LLM library
+public class OpenAIAdapter : ILlmClient
+{
+    private readonly ILanguageModel _llm;
+
+    public async Task<string> GenerateAsync(string prompt, CancellationToken ct)
+    {
+        return await _llm.GenerateAsync(prompt, ct);
+    }
+}
+
+// 2. Add sensor to orchestrator
+var orchestrator = new UtilityAiOrchestrator(bus: bus)
+    .AddSensor(LlmIntentSensor.ForMessageType<UserMessage>(
+        new OpenAIAdapter(llm),
+        msg => msg.Text
+    ))
+    .AddModule(new QueryModule())
+    .AddModule(new UpdateModule());
+
+// 3. Modules react to IntentAnalysis facts naturally
+public class QueryModule : ICapabilityModule
+{
+    public IEnumerable<Proposal> Propose(Runtime rt)
+    {
+        var analysis = rt.Bus.GetOrDefault<IntentAnalysis>();
+
+        yield return ProposalHelper.For("execute-query")
+            .WithConsideration(new SignalConsideration<IntentAnalysis>(
+                "query-intent",
+                a => a.Intent.StartsWith("query.") ? 1.0 : 0.0,
+                x => x,
+                (0, 1)))
+            .WithConsideration(new SignalConsideration<IntentAnalysis>(
+                "confidence",
+                a => a.Confidence,
+                x => x,
+                (0, 1)))
+            .WithAction(async ct => await ExecuteQuery(rt, ct));
+    }
+}
+```
+
+### What the LLM Does
+
+1. **Analyzes the user message** - Extracts intent and entities
+2. **Publishes structured facts** - `IntentAnalysis` with intent string, entity dictionary, and confidence score
+3. **That's it** - LLM doesn't pick actions, doesn't know about action IDs
+
+### What the Utility System Does
+
+1. **Modules check for `IntentAnalysis`** - Like any other EventBus fact
+2. **Considerations score based on intent** - Natural utility-based decision making
+3. **Highest utility wins** - The right action executes automatically
+
+### The IntentAnalysis Fact
+
+```csharp
+public sealed record IntentAnalysis(
+    string Intent,                          // e.g., "query.sales", "update.customer"
+    IReadOnlyDictionary<string, object> Entities,  // e.g., { "timeRange": "last_month" }
+    double Confidence                        // 0.0 - 1.0
+);
+```
+
+### Example Flow
+
+```
+User: "Show me top customers from last month"
+         ↓
+LlmIntentSensor analyzes
+         ↓
+Publishes: IntentAnalysis(
+    Intent: "query.customers",
+    Entities: { "timeRange": "last_month", "sortBy": "revenue" },
+    Confidence: 0.95
+)
+         ↓
+QueryModule scores high (has considerations for query intents)
+UpdateModule scores low (no match)
+         ↓
+QueryModule's "execute-query" action wins
+         ↓
+Action executes, publishes QueryResult to EventBus
+```
+
+### Optional: Include Capabilities Context
+
+```csharp
+// LLM sees what actions are available (helps with intent interpretation)
+var orchestrator = new UtilityAiOrchestrator(bus: bus)
+    .AddSensor(LlmIntentSensor.ForMessageType<UserMessage>(
+        llmClient,
+        msg => msg.Text,
+        includeCapabilities: true  // LLM sees available actions
+    ))
+    .AddModule(new QueryModule());
+
+// You need to publish CapabilitiesSnapshot
+var capabilities = orchestrator.GetCapabilitiesInfo(runtime);
+bus.Publish(new CapabilitiesSnapshot(capabilities));
+```
+
+### Testing Intent Analysis
+
+```csharp
+[Fact]
+public async Task IntentSensor_PublishesAnalysis()
+{
+    // Arrange
+    var bus = new EventBus();
+    bus.Publish(new UserMessage("Show sales data"));
+
+    var mockLlm = new MockLlmClient(@"{
+        ""intent"": ""query.sales"",
+        ""entities"": { ""dataType"": ""sales"" },
+        ""confidence"": 0.9
+    }");
+
+    var sensor = LlmIntentSensor.ForMessageType<UserMessage>(
+        mockLlm,
+        msg => msg.Text
+    );
+
+    var rt = new Runtime(bus, intent, 1);
+
+    // Act
+    await sensor.SenseAsync(rt, CancellationToken.None);
+
+    // Assert
+    var analysis = bus.GetOrDefault<IntentAnalysis>();
+    Assert.Equal("query.sales", analysis.Intent);
+    Assert.Equal(0.9, analysis.Confidence);
+}
+```
+
+### Why This Approach is Better
+
+**✅ Maintains utility AI principles**
+- LLM provides data (facts), utility system makes decisions
+- Actions compete naturally based on scoring
+- No coupling between LLM and action IDs
+
+**✅ Clean separation of concerns**
+- LLM: Natural language understanding
+- Utility System: Action selection
+- Each does what it's best at
+
+**✅ Testable**
+- Mock the LLM easily
+- Test modules independently
+- Clear fact-based architecture
+
+**✅ Extensible**
+- Add new modules without touching LLM code
+- Change intent interpretation independently
+- Scale to complex multi-module systems
+
+### When to Use This
+
+**Use LLM intent interpretation when:**
+- Building chat applications
+- User input is natural language
+- Need to bootstrap initial EventBus state
+- Want intelligent intent classification
+
+**Skip LLM intent interpretation when:**
+- Input is already structured (APIs, forms)
+- Intent is obvious from context
+- Performance is critical
+- Cost constraints (LLM calls are expensive)
+
+---
+
 ## 🔧 Extension Points
 
 ### For Framework Users
@@ -869,7 +1061,8 @@ For a Slack bot that DMs users:
 4. **Implement IEligibility** - Hard gates
 5. **Implement ISelectionStrategy** - Custom selection (epsilon-greedy, softmax)
 6. **Implement IOrchestrationSink** - Observability
-7. **Extend EventBus** - Custom persistence, distribution
+7. **Implement ILlmClient** - LLM adapters for intent analysis
+8. **Extend EventBus** - Custom persistence, distribution
 
 ### For Framework Developers
 

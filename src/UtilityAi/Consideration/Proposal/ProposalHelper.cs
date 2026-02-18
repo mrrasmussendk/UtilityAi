@@ -88,7 +88,7 @@ public sealed class ProposalBuilder
 
     /// <summary>
     /// Sets a human-readable description of what this action does.
-    /// Useful for LLM planning, debugging, and introspection.
+    /// Useful for LLM context, debugging, and introspection.
     /// </summary>
     public ProposalBuilder WithDescription(string description)
     {

@@ -22,7 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
+        <ProjectReference Include="..\..\src\UtilityAi\UtilityAi.csproj" />
         <ProjectReference Include="..\UtilityAi.Dashboard\UtilityAi.Dashboard.csproj" />
     </ItemGroup>
 
