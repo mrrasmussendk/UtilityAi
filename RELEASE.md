@@ -71,11 +71,18 @@ These preview packages:
 
 ## Current Version
 
-The current version is stored in `UtilityAi/UtilityAi.csproj`:
+The current versions are stored in each project's `.csproj`:
 
-```xml
-<Version>1.1.4</Version>
-```
+- `UtilityAi/UtilityAi.csproj`:
+  ```xml
+  <Version>1.1.4</Version>
+  ```
+- `UtilityAi.Maf/UtilityAi.Maf.csproj`:
+  ```xml
+  <Version>1.0.0</Version>
+  ```
+
+Both packages are built, packed, and published together. The same version override is applied to both during release.
 
 ## Versioning Guidelines
 
