@@ -4,17 +4,33 @@ This document describes how to create releases for the UtilityAI framework.
 
 ## Overview
 
-The project uses GitHub Actions to automate building, testing, and releasing. The workflow supports three release methods:
+The project uses GitHub Actions to automate building, testing, and releasing. The workflow supports four release methods:
 
-1. **Automatic Tag-Based Release** (traditional)
-2. **Manual Release via Workflow Dispatch** (new)
-3. **Preview Builds** on every push to main
+1. **Automatic Release on Push to Main** (recommended) — bump the version in csproj and push
+2. **Tag-Based Release** (traditional) — push a `v*` tag
+3. **Manual Release via Workflow Dispatch** — trigger from GitHub Actions UI
+4. **Preview Builds** on every push to main (when version hasn't changed)
 
 ## Release Methods
 
-### 1. Automatic Tag-Based Release
+### 1. Automatic Release on Push to Main (recommended)
 
-Push a version tag to trigger an automatic release:
+When you bump the `<Version>` in `src/UtilityAi/UtilityAi.csproj` and push to `main`, the pipeline automatically:
+- ✅ Builds and tests the project
+- ✅ Detects the new version (no existing tag for that version)
+- ✅ Creates NuGet packages with the csproj version
+- ✅ Creates a git tag (e.g., `v1.3.0`)
+- ✅ Creates a GitHub release with auto-generated notes
+- ✅ Publishes to NuGet.org
+
+**How to release:**
+1. Bump the `<Version>` in `src/UtilityAi/UtilityAi.csproj`
+2. Commit and push to `main` (or merge a PR)
+3. The pipeline handles the rest automatically
+
+### 2. Tag-Based Release
+
+Push a version tag to trigger a release:
 
 ```bash
 # Create and push a version tag
@@ -29,7 +45,7 @@ This will:
 - ✅ Create a GitHub release with auto-generated notes
 - ✅ Publish to NuGet.org
 
-### 2. Manual Release (No Tag Required)
+### 3. Manual Release via Workflow Dispatch
 
 You can now trigger a release manually without creating a tag first:
 
@@ -50,7 +66,7 @@ This will:
 - Creating a package for local testing (leave checkbox unchecked)
 - Retroactively releasing a specific commit with a version
 
-### 3. Preview Builds
+### 4. Preview Builds
 
 Every push to the `main` branch automatically creates a preview package:
 
@@ -75,7 +91,7 @@ The current versions are stored in each project's `.csproj`:
 
 - `UtilityAi/UtilityAi.csproj`:
   ```xml
-  <Version>1.1.4</Version>
+  <Version>1.3.0</Version>
   ```
 - `UtilityAi.Maf/UtilityAi.Maf.csproj`:
   ```xml
@@ -103,6 +119,7 @@ Follow [Semantic Versioning](https://semver.org/):
 - **Pack** - Runs on all pushes to main (not PRs)
 - **Upload artifacts** - Runs on all pushes to main (not PRs)
 - **Release** - Only runs for:
+  - Push to main with a new version in csproj (auto-release)
   - Tag pushes (v*)
   - Manual workflow dispatch with "create_release" checked
 
