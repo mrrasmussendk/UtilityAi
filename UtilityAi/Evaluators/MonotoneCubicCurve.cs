@@ -6,6 +6,9 @@
     /// </summary>
     public sealed class MonotoneCubicCurve : ICurve
     {
+        // Tolerance for detecting near-zero slopes to prevent division by zero in harmonic mean
+        private const double SLOPE_EPSILON = 1e-12;
+        
         public Range Domain { get; }
         public Range Output { get; }
 
@@ -79,7 +82,7 @@
             // Interior tangents: weighted harmonic mean if slopes have same sign
             for (int i = 1; i < n - 1; i++)
             {
-                if (d[i - 1] * d[i] <= 0 || Math.Abs(d[i - 1]) < 1e-12 || Math.Abs(d[i]) < 1e-12)
+                if (d[i - 1] * d[i] <= 0 || Math.Abs(d[i - 1]) < SLOPE_EPSILON || Math.Abs(d[i]) < SLOPE_EPSILON)
                 {
                     m[i] = 0;
                 }
@@ -94,7 +97,7 @@
             // Fritsch–Carlson slope limiter to avoid overshoot
             for (int i = 0; i < n - 1; i++)
             {
-                if (Math.Abs(d[i]) < 1e-12)
+                if (Math.Abs(d[i]) < SLOPE_EPSILON)
                 {
                     m[i] = 0; m[i + 1] = 0;
                     continue;

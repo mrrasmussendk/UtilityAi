@@ -49,7 +49,6 @@
             if (x >= _t[^1]) return _v[^1];
 
             int hi = MathX.LowerBound(_t, x);
-            if (hi == 0) hi = 1; // Safety check: ensure hi is at least 1
             int lo = hi - 1;
             double t = MathX.InverseLerp(_t[lo], _t[hi], x);
             return Output.Clamp(MathX.Lerp(_v[lo], _v[hi], t));

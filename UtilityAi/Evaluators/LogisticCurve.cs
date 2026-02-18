@@ -8,6 +8,9 @@
     /// </summary>
     public sealed class LogisticCurve : ICurve
     {
+        // Tolerance for detecting near-zero k parameter to prevent division by zero
+        private const double K_EPSILON = 1e-12;
+        
         public Range Domain { get; }
         public Range Output { get; }
 
@@ -47,7 +50,7 @@
 
             double k = (L1 - L2) / (a.x - b.x);
             
-            if (Math.Abs(k) < 1e-12)
+            if (Math.Abs(k) < K_EPSILON)
                 throw new ArgumentException("Anchors must have distinct y values relative to their x separation.");
             
             double x0 = a.x - L1 / k;

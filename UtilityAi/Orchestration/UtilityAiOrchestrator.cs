@@ -157,7 +157,15 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     private (Proposal chosen, double utility)? ChooseAndMaybeStopAtZero(Runtime rt, List<(Proposal p, double u)> scored, IOrchestrationSink sink, bool stopAtZero)
     {
         var chosen = _selector.Select(scored.Select(x => (x.p, x.u)).ToList(), rt);
-        var chosenUtility = scored.FirstOrDefault(x => ReferenceEquals(x.p, chosen)).u;
+        var match = scored.FirstOrDefault(x => ReferenceEquals(x.p, chosen));
+        
+        // If chosen proposal is not found in scored list, this indicates a selector bug
+        if (match.p == null)
+        {
+            throw new InvalidOperationException("Selection strategy returned a proposal not in the scored list.");
+        }
+        
+        var chosenUtility = match.u;
 
         if (stopAtZero && chosenUtility == 0)
         {

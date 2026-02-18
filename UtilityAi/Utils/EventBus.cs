@@ -84,7 +84,7 @@ public sealed class EventBus : IDisposable
                     catch (Exception)
                     {
                         // Swallow subscriber exceptions to prevent cascading failures
-                        // Note: Critical exceptions like OutOfMemoryException will still propagate
+                        // Note: All exceptions are caught to ensure stability
                     }
                 }
             }
