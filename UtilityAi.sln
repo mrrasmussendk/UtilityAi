@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 #
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi", "src\UtilityAi\UtilityAi.csproj", "{E2302B4B-73D5-4DEE-AB4D-0804622E1791}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "tests\Tests\Tests.csproj", "{83C01D79-3A37-4A91-B480-7D5DB4B30B74}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests\Tests.csproj", "{83C01D79-3A37-4A91-B480-7D5DB4B30B74}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilityAi.Dashboard", "tools\UtilityAi.Dashboard\UtilityAi.Dashboard.csproj", "{DF90141D-4FE1-423C-B203-D6A10E4B3475}"
 EndProject
