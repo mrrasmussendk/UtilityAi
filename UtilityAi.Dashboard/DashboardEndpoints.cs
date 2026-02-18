@@ -24,7 +24,7 @@ public static class DashboardEndpoints
     /// </summary>
     /// <param name="endpoints">The endpoint route builder (e.g., <c>app</c>).</param>
     /// <param name="state">The shared <see cref="DashboardState"/> that the <see cref="DashboardSink"/> writes to.</param>
-    /// <param name="prefix">URL prefix for the dashboard. Defaults to <c>/utilityai"</c>.</param>
+    /// <param name="prefix">URL prefix for the dashboard. Defaults to <c>/utilityai</c>.</param>
     /// <returns>The endpoint route builder for chaining.</returns>
     /// <example>
     /// <code>
