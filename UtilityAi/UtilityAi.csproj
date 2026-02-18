@@ -35,6 +35,10 @@
         <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
   <PropertyGroup>
     <!-- Suppress XML doc warnings and related doc-comment mismatches for public API -->
     <NoWarn>1591;1572;1573;1734</NoWarn>

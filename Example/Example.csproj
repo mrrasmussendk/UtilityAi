@@ -14,10 +14,14 @@
     </ItemGroup>
 
     <ItemGroup>
-      <!-- Exclude SmartHomeAgent folder - it's a separate project -->
+      <!-- Exclude separate example projects -->
       <Compile Remove="SmartHomeAgent\**" />
       <EmbeddedResource Remove="SmartHomeAgent\**" />
       <None Remove="SmartHomeAgent\**" />
+
+      <Compile Remove="Example.LLM.ChatBot\**" />
+      <EmbeddedResource Remove="Example.LLM.ChatBot\**" />
+      <None Remove="Example.LLM.ChatBot\**" />
     </ItemGroup>
 
 </Project>
