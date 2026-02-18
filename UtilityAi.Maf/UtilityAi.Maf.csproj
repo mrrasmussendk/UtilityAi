@@ -15,9 +15,25 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/mrrasmussendk/UtilityAi</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/mrrasmussendk/UtilityAi</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageTags>utility-ai;ai;agent;orchestration;maf;microsoft-agent-framework;dotnet;csharp</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+        <!-- Build determinism & source info -->
+        <Deterministic>true</Deterministic>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+        <!-- Symbols -->
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="../README.md" Pack="true" PackagePath="/" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
@@ -25,6 +41,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Agents.AI.Abstractions" Version="1.0.0-preview.260212.1" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     </ItemGroup>
 
     <PropertyGroup>
