@@ -19,7 +19,7 @@ public sealed class NoRepeatEligible(string id) : IEligibility
     public bool IsEligible(Runtime rt)
     {
         rt.Bus.TryGet<Stack<string>>(out var stack);
-        return !stack.Contains(id);
+        return stack == null || !stack.Contains(id);
     }
 
     public string Name { get; } = "NoRepeatEligible";

@@ -90,4 +90,48 @@ public class EligibilityTests
         var p = new Proposal("X", Enumerable.Empty<IConsideration>(), ct => Task.CompletedTask);
         Assert.True(p.IsEligible(rt));
     }
+
+    [Fact]
+    public void NoRepeatEligible_Handles_Null_Stack()
+    {
+        // Test for Bug #4: NoRepeatEligible should handle null stack gracefully
+        var bus = new EventBus();
+        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var eligibility = new NoRepeatEligible("test-id");
+        
+        // Should return true when stack doesn't exist (null)
+        Assert.True(eligibility.IsEligible(rt));
+    }
+
+    [Fact]
+    public void NoRepeatEligible_Returns_False_When_Id_In_Stack()
+    {
+        var bus = new EventBus();
+        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var eligibility = new NoRepeatEligible("test-id");
+        
+        // Create a stack with the ID
+        var stack = new Stack<string>();
+        stack.Push("test-id");
+        bus.Publish(stack);
+        
+        // Should return false when ID is in stack
+        Assert.False(eligibility.IsEligible(rt));
+    }
+
+    [Fact]
+    public void NoRepeatEligible_Returns_True_When_Id_Not_In_Stack()
+    {
+        var bus = new EventBus();
+        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var eligibility = new NoRepeatEligible("test-id");
+        
+        // Create a stack without the ID
+        var stack = new Stack<string>();
+        stack.Push("other-id");
+        bus.Publish(stack);
+        
+        // Should return true when ID is not in stack
+        Assert.True(eligibility.IsEligible(rt));
+    }
 }
