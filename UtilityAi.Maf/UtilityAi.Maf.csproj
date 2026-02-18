@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>UtilityAi.Maf</RootNamespace>
+
+        <!-- NuGet metadata -->
+        <PackageId>UtilityAi.Maf</PackageId>
+        <Version>1.0.0</Version>
+        <Title>UtilityAI Framework - Microsoft Agent Framework Integration</Title>
+        <Description>Integration layer between UtilityAI orchestration framework and Microsoft Agent Framework (MAF). Enables utility-based decision-making to select and orchestrate MAF agents.</Description>
+        <Authors>Marc Rasmussen</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/mrrasmussendk/UtilityAi</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>utility-ai;ai;agent;orchestration;maf;microsoft-agent-framework;dotnet;csharp</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\UtilityAi\UtilityAi.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Agents.AI.Abstractions" Version="1.0.0-preview.260212.1" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <NoWarn>1591;1572;1573;1734</NoWarn>
+    </PropertyGroup>
+
+</Project>
