@@ -371,6 +371,12 @@ Please ensure all tests pass before submitting.
 
 ---
 
+## 📦 Releases
+
+For maintainers: See [RELEASE.md](RELEASE.md) for instructions on creating releases. The project supports both traditional tag-based releases and manual releases via GitHub Actions workflow dispatch.
+
+---
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
