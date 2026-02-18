@@ -151,14 +151,26 @@ public static class DashboardEndpoints
 
             if (resourceName is null)
             {
-                ctx.Response.StatusCode = 404;
-                await ctx.Response.WriteAsync("Dashboard not found");
+                ctx.Response.StatusCode = 500;
+                var availableResources = string.Join(", ", assembly.GetManifestResourceNames());
+                await ctx.Response.WriteAsync(
+                    $"Dashboard HTML resource not found. Available resources: {availableResources}");
                 return;
             }
 
             ctx.Response.ContentType = "text/html; charset=utf-8";
-            await using var stream = assembly.GetManifestResourceStream(resourceName)!;
-            await stream.CopyToAsync(ctx.Response.Body);
+            var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is null)
+            {
+                ctx.Response.StatusCode = 500;
+                await ctx.Response.WriteAsync($"Failed to load resource stream: {resourceName}");
+                return;
+            }
+
+            await using (stream)
+            {
+                await stream.CopyToAsync(ctx.Response.Body);
+            }
         });
 
         return endpoints;
