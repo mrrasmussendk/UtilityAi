@@ -152,6 +152,9 @@ public sealed class EventBus : IDisposable
                 .Select(e => new TimestampedEvent<T>((T)e.Value, e.Timestamp))
                 .ToList();
 
+            if (maxItems.HasValue && maxItems.Value <= 0)
+                return Array.Empty<TimestampedEvent<T>>();
+
             if (maxItems.HasValue && maxItems.Value < typed.Count)
                 return typed.Skip(typed.Count - maxItems.Value).ToList();
 
