@@ -1,5 +1,6 @@
 using Azure.AI.Agents.Persistent;
 using Azure.AI.Projects;
+using Azure.AI.Projects.OpenAI;
 using Azure.Identity;
 
 namespace UtilityAi.Maf;
@@ -11,6 +12,7 @@ namespace UtilityAi.Maf;
 public sealed class MafClient
 {
     private readonly AIProjectClient _client;
+    
     private readonly string? _modelDeploymentName = System.Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME");
 
     /// <summary>
@@ -32,6 +34,16 @@ public sealed class MafClient
         _modelDeploymentName =
             modelDeploymentName ?? System.Environment.GetEnvironmentVariable("MODEL_DEPLOYMENT_NAME");
         _client = new AIProjectClient((endpoint), credential);
+    }
+
+    public ProjectResponsesClient GetOpenAiResponseClient()
+    {
+        return _client.OpenAI.GetProjectResponsesClientForModel(_modelDeploymentName);
+    }
+    
+    public AIProjectClient GetProjectClient()
+    {
+        return _client;
     }
 
     public PersistentAgentsClient GetAgentsClient()
