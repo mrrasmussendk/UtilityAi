@@ -37,9 +37,9 @@ public static class MafRequestExtensions
 
         var schemaBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(schema);
 
-        // Extract messages
+        // Extract messages from the "input" field
         messages = new List<ChatMessage>();
-        if (requestEnvelope?["messages"] is JsonArray messagesArray)
+        if (requestEnvelope?["input"] is JsonArray messagesArray)
         {
             foreach (var msg in messagesArray)
             {
