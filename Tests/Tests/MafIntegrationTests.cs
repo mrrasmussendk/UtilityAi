@@ -151,7 +151,7 @@ public class MafIntegrationTests
         // Note: This is an integration test concept. In practice, you would need a real or mocked ChatClient.
         // For demonstration, we'll test the deserialization logic with a mock response structure.
         
-        var responseJson = @"{""output"":[{""explanation"":""test explanation"",""output"":""42""}]}";
+        var responseJson = @"{""output"":[{""Explanation"":""test explanation"",""Output"":""42""}]}";
         
         // Verify the JSON structure can be parsed correctly
         using var doc = JsonDocument.Parse(responseJson);
@@ -168,7 +168,7 @@ public class MafIntegrationTests
     [Fact]
     public void CompleteAndDeserialize_WithDirectObjectResponse_DeserializesObject()
     {
-        var responseJson = @"{""output"":{""explanation"":""direct test"",""output"":""99""}}";
+        var responseJson = @"{""output"":{""Explanation"":""direct test"",""Output"":""99""}}";
         
         using var doc = JsonDocument.Parse(responseJson);
         var outputElement = doc.RootElement.GetProperty("output");
@@ -184,7 +184,7 @@ public class MafIntegrationTests
     [Fact]
     public void CompleteAndDeserialize_WithCustomPropertyName_ExtractsCorrectProperty()
     {
-        var responseJson = @"{""result"":[{""explanation"":""custom property"",""output"":""7""}]}";
+        var responseJson = @"{""result"":[{""Explanation"":""custom property"",""Output"":""7""}]}";
         
         using var doc = JsonDocument.Parse(responseJson);
         var resultElement = doc.RootElement.GetProperty("result");
