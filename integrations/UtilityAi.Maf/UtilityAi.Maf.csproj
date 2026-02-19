@@ -8,7 +8,7 @@
 
         <!-- NuGet metadata -->
         <PackageId>UtilityAi.Maf</PackageId>
-        <Version>1.0.2</Version>
+        <Version>1.0.3</Version>
         <Title>UtilityAI Framework - Microsoft Agent Framework Integration</Title>
         <Description>Integration layer between UtilityAI orchestration framework and Microsoft Agent Framework (MAF). Enables utility-based decision-making to select and orchestrate MAF agents.</Description>
         <Authors>Marc Rasmussen</Authors>

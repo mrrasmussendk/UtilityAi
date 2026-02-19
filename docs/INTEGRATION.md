@@ -170,6 +170,87 @@ var agent2 = mafClient.CreateAgent("assistant", "Different instructions");
 // agent1 and agent2 reference the same cached agent
 ```
 
+### Structured Output with MAF
+
+The `MafRequestExtensions` class provides helper methods to easily configure structured output (JSON Schema) for MAF chat completions, reducing boilerplate code.
+
+#### Using AiRequestBuilder with MAF
+
+```csharp
+using UtilityAi.Helpers.OpenAiStructuredOutputHelper;
+using UtilityAi.Maf;
+using Azure.AI.Projects.OpenAI;
+
+// Define your response model
+public record MathStep
+{
+    public string Explanation { get; init; } = string.Empty;
+    public string Output { get; init; } = string.Empty;
+}
+
+public record MathReasoning
+{
+    public MathStep[] Steps { get; init; } = Array.Empty<MathStep>();
+    public string FinalAnswer { get; init; } = string.Empty;
+}
+
+// Build options using AiRequestBuilder
+var options = AiRequestBuilder.Create()
+    .WithModel("gpt-4")
+    .AddUser("How can I solve 8x + 7 = -23?")
+    .WithJsonSchemaFrom<MathStep>("math_reasoning")
+    .ToChatCompletionOptions();
+
+// Use with MAF chat client
+var chatClient = mafClient.GetOpenAiResponseClient();
+var completion = chatClient.CompleteChat(
+    [new UserChatMessage("How can I solve 8x + 7 = -23?")],
+    options
+);
+```
+
+#### Direct Helper Methods
+
+```csharp
+using UtilityAi.Maf;
+using System.Text.Json.Nodes;
+
+// Method 1: Create from .NET type
+var options = MafRequestExtensions.CreateStructuredOptions<MathStep>(
+    schemaName: "math_reasoning",
+    strict: true
+);
+
+// Method 2: Create from JsonObject schema
+var schema = new JsonObject
+{
+    ["type"] = "object",
+    ["properties"] = new JsonObject
+    {
+        ["explanation"] = new JsonObject { ["type"] = "string" },
+        ["output"] = new JsonObject { ["type"] = "string" }
+    },
+    ["required"] = new JsonArray { "explanation", "output" },
+    ["additionalProperties"] = false
+};
+
+var options = MafRequestExtensions.CreateStructuredOptions(
+    schemaName: "math_reasoning",
+    schema: schema,
+    strict: true
+);
+
+// Use with chat completion
+var completion = chatClient.CompleteChat(messages, options);
+```
+
+#### Benefits
+
+- **Reduced Boilerplate**: No need to manually construct `BinaryData` and `ChatResponseFormat`
+- **Type Safety**: Generate schemas directly from .NET types
+- **Reusability**: Leverage existing `AiRequestBuilder` infrastructure
+- **Consistency**: Unified approach across OpenAI and MAF integrations
+
 ### Full Working Example
 
 See the [`examples/Example.Maf/`](../examples/Example.Maf/) project for a complete working demonstration showing:
@@ -178,12 +259,14 @@ See the [`examples/Example.Maf/`](../examples/Example.Maf/) project for a comple
 - Thread and message management
 - Response handling
 - Proper cleanup
+- Structured output usage
 
 ### References
 
 - [Azure AI Projects Documentation](https://learn.microsoft.com/en-us/azure/ai-services/agents/)
 - [Azure.AI.Projects NuGet Package](https://www.nuget.org/packages/Azure.AI.Projects)
 - [Azure.AI.Agents.Persistent NuGet Package](https://www.nuget.org/packages/Azure.AI.Agents.Persistent)
+- [Structured Outputs Guide](https://platform.openai.com/docs/guides/structured-outputs)
 
 ---
 

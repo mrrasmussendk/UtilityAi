@@ -1,8 +1,11 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Azure.AI.Projects.OpenAI;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using UtilityAi.Consideration;
+using UtilityAi.Helpers.OpenAiStructuredOutputHelper;
 using UtilityAi.Maf;
 using UtilityAi.Orchestration;
 using UtilityAi.Utils;
@@ -30,8 +33,97 @@ public class MafIntegrationTests
 
 
 
+    // ─── MafRequestExtensions ────────────────────────────────────
+
+    [Fact]
+    public void ToChatCompletionOptions_WithValidSchema_ReturnsOptions()
+    {
+        // Arrange
+        var builder = AiRequestBuilder.Create()
+            .WithModel("gpt-4")
+            .AddUser("Test message")
+            .WithJsonSchemaFrom<MathStep>("math_reasoning");
+
+        // Act
+        var options = builder.ToChatCompletionOptions();
+
+        // Assert
+        Assert.NotNull(options);
+        Assert.NotNull(options.ResponseFormat);
+    }
+
+    [Fact]
+    public void ToChatCompletionOptions_WithoutSchema_ThrowsException()
+    {
+        // Arrange
+        var builder = AiRequestBuilder.Create()
+            .WithModel("gpt-4")
+            .AddUser("Test message");
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => builder.ToChatCompletionOptions());
+    }
+
+    [Fact]
+    public void CreateStructuredOptions_FromType_ReturnsValidOptions()
+    {
+        // Act
+        var options = MafRequestExtensions.CreateStructuredOptions<MathStep>("math_reasoning");
+
+        // Assert
+        Assert.NotNull(options);
+        Assert.NotNull(options.ResponseFormat);
+    }
+
+    [Fact]
+    public void CreateStructuredOptions_FromJsonObject_ReturnsValidOptions()
+    {
+        // Arrange
+        var schema = new JsonObject
+        {
+            ["type"] = "object",
+            ["properties"] = new JsonObject
+            {
+                ["explanation"] = new JsonObject { ["type"] = "string" },
+                ["output"] = new JsonObject { ["type"] = "string" }
+            },
+            ["required"] = new JsonArray { "explanation", "output" },
+            ["additionalProperties"] = false
+        };
+
+        // Act
+        var options = MafRequestExtensions.CreateStructuredOptions("test_schema", schema);
+
+        // Assert
+        Assert.NotNull(options);
+        Assert.NotNull(options.ResponseFormat);
+    }
+
+    [Fact]
+    public void CreateStructuredOptions_WithStrictMode_ConfiguresCorrectly()
+    {
+        // Act - strict = true
+        var strictOptions = MafRequestExtensions.CreateStructuredOptions<MathStep>("test", strict: true);
+
+        // Act - strict = false
+        var nonStrictOptions = MafRequestExtensions.CreateStructuredOptions<MathStep>("test", strict: false);
+
+        // Assert
+        Assert.NotNull(strictOptions);
+        Assert.NotNull(nonStrictOptions);
+        // Note: ResponseFormat doesn't expose strict property directly, but we verify it doesn't throw
+    }
+
     // ─── Test Helpers ────────────────────────────────────────────
-    
+
+    /// <summary>
+    /// Test model for structured output testing.
+    /// </summary>
+    private record MathStep
+    {
+        public string Explanation { get; init; } = string.Empty;
+        public string Output { get; init; } = string.Empty;
+    }
 
     private sealed class StubSession : AgentSession
     {
