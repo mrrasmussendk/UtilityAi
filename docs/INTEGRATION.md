@@ -15,171 +15,175 @@ This guide shows how to integrate the UtilityAI framework with various AI servic
 
 ## Microsoft Agent Framework (MAF) Integration
 
-The `UtilityAi.Maf` package provides first-class integration between UtilityAI and [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/) (MAF). This enables utility-based decision-making to select and orchestrate MAF agents — UtilityAI decides **which** agent runs, while MAF handles the actual agent execution.
+The `UtilityAi.Maf` package provides integration between UtilityAI and [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/) through Azure AI Projects. This enables you to use Azure AI Agents within your UtilityAI proposals.
 
 ### Installation
 
 ```bash
-dotnet add package UtilityAi
-dotnet add package Microsoft.Agents.AI.Abstractions --prerelease
+dotnet add package UtilityAi.Maf
 ```
 
-Then reference the `UtilityAi.Maf` project (or future NuGet package).
-
-### Architecture
-
-```
-UtilityAI (Decision Layer)          MAF (Execution Layer)
-┌─────────────────────────┐         ┌──────────────────────┐
-│  Sense → Propose →      │         │   AIAgent            │
-│  Score → Select →  ──────────────→│   .RunAsync()        │
-│                    Act   │         │   .RunStreamingAsync │
-│                          │         └──────────────────────┘
-│  EventBus ← Result  ←──────────── AgentResponse          │
-└─────────────────────────┘
-```
-
-### Quick Start: Register MAF Agents
+### Quick Start
 
 ```csharp
-using Microsoft.Agents.AI;
 using UtilityAi.Maf;
 using UtilityAi.Orchestration;
-using UtilityAi.Utils;
+using UtilityAi.Capabilities;
 
-// Create MAF agents (from Azure OpenAI, custom implementation, etc.)
-AIAgent researchAgent = CreateResearchAgent();
-AIAgent writerAgent = CreateWriterAgent();
+// Create MAF client with Azure credentials
+var mafClient = new MafClient("https://your-project.openai.azure.com");
 
-// Build orchestrator with MAF agents
-var bus = new EventBus();
-var orchestrator = new UtilityAiOrchestrator(bus: bus)
-    .AddMafAgents(
-        registrations: new[]
-        {
-            new MafAgentRegistration("research", researchAgent),
-            new MafAgentRegistration("writer", writerAgent)
-        },
-        configure: agents =>
-        {
-            // Register Research Agent
-            agents.Register(
-                agent: researchAgent,
-                agentName: "research",
-                considerations: new IConsideration[]
+// Use in a capability module
+public class MyModule : ICapabilityModule
+{
+    private readonly MafClient _mafClient;
+
+    public MyModule(MafClient mafClient)
+    {
+        _mafClient = mafClient;
+    }
+
+    public IEnumerable<Proposal> Propose(Runtime rt)
+    {
+        yield return new Proposal(
+            id: "answer-query",
+            cons: new[] { /* your considerations */ },
+            act: async ct =>
+            {
+                // Get user query
+                var query = rt.Intent.Slots?["query"]?.ToString() ?? "No query";
+
+                // Create agent
+                var agent = _mafClient.CreateAgent(
+                    name: "assistant",
+                    instructions: "You are a helpful assistant."
+                );
+
+                var agentsClient = _mafClient.GetAgentsClient();
+
+                // Create thread and run agent
+                var thread = agentsClient.Threads.CreateThread();
+                agentsClient.Messages.CreateMessage(
+                    thread.Value.Id,
+                    MessageRole.User,
+                    query
+                );
+
+                var run = agentsClient.Runs.CreateRun(thread.Value.Id, agent.Id);
+
+                // Wait for completion
+                do
                 {
-                    new MafAgentAvailable("research"),
-                    new HasMafAgentResult("research", invert: true) // Not yet researched
-                });
+                    await Task.Delay(500, ct);
+                    run = agentsClient.Runs.GetRun(thread.Value.Id, run.Value.Id);
+                }
+                while (run.Value.Status == RunStatus.Queued
+                    || run.Value.Status == RunStatus.InProgress);
 
-            // Register Writer Agent
-            agents.Register(
-                agent: writerAgent,
-                agentName: "writer",
-                considerations: new IConsideration[]
+                // Get response
+                var messages = agentsClient.Messages.GetMessages(
+                    thread.Value.Id,
+                    order: ListSortOrder.Ascending
+                );
+
+                foreach (var message in messages)
                 {
-                    new MafAgentAvailable("writer"),
-                    new HasMafAgentResult("research") // Research must be done first
-                });
-        });
+                    if (message.Role.ToString() == "assistant")
+                    {
+                        foreach (var contentItem in message.ContentItems)
+                        {
+                            if (contentItem is MessageTextContent textItem)
+                            {
+                                rt.Bus.Publish(new AgentResponse(textItem.Text));
+                                break;
+                            }
+                        }
+                    }
+                }
 
-await orchestrator.RunAsync(
-    new UserIntent("What is utility AI?"),
-    maxTicks: 5,
-    CancellationToken.None);
-
-// Read agent result from EventBus
-var result = bus.GetOrDefault<MafAgentResult>();
-Console.WriteLine(result?.Text);
+                // Cleanup
+                agentsClient.Threads.DeleteThread(thread.Value.Id);
+            }
+        );
+    }
+}
 ```
 
 ### Key Components
 
 | Component | Purpose |
 |-----------|---------|
-| `MafAgentCapabilityModule` | Single module representing the MAF orchestration capability. Agents register within this module and each proposes an action. |
-| `MafAgentSensor` | Publishes agent availability to the EventBus each tick |
-| `MafOrchestratorExtensions` | `AddMafAgents()` for fluent setup with sensor + module registration |
-| `MafAgentAvailable` | Consideration: scores 1.0 if agent is available |
-| `HasMafAgentResult` | Consideration: scores based on existing agent results |
-| `RequiresMafAgent` | Eligibility gate: requires agent to be registered |
-| `MafAgentRegistration` | Describes a registered agent and its state |
-| `MafAgentResult` | Published to EventBus after agent execution |
-| `MafAgentCatalog` | Full catalog of registered agents |
+| `MafClient` | Wraps Azure AI Projects client for agent creation and management |
+| `MafClient.CreateAgent()` | Creates a persistent agent with specified instructions |
+| `MafClient.GetAgentsClient()` | Returns the `PersistentAgentsClient` for thread/run operations |
 
-### Architecture Pattern
+### Architecture
 
-The MAF integration follows the standard UtilityAI pattern:
-
-- **Module = Capability**: `MafAgentCapabilityModule` represents the capability of "MAF agent orchestration"
-- **Proposals = Strategies**: Each registered agent produces one proposal per tick
-- **Actions = Dynamic Behavior**: Actions read current EventBus state, invoke agents, and publish results
-
-This aligns with how other UtilityAI modules work (e.g., `SendMessageModule` proposes multiple messaging strategies).
-
-### Multi-Agent Workflow
-
-The integration naturally supports multi-agent workflows through utility scoring:
-
-```csharp
-.AddMafAgents(
-    registrations: new[] { /* ... */ },
-    configure: agents =>
-    {
-        // Research agent: high utility when research hasn't been done
-        agents.Register(researchAgent, "research",
-            considerations: new IConsideration[]
-            {
-                new MafAgentAvailable("research"),
-                new HasMafAgentResult("research", invert: true), // Not yet done
-            });
-
-        // Writer agent: high utility after research completes
-        agents.Register(writerAgent, "writer",
-            considerations: new IConsideration[]
-            {
-                new MafAgentAvailable("writer"),
-                new HasMafAgentResult("research"), // Research done
-            });
-    });
+```
+UtilityAI (Decision Layer)          Azure AI Agents (Execution Layer)
+┌─────────────────────────┐         ┌──────────────────────────────┐
+│  Sense → Propose →      │         │   MafClient                  │
+│  Score → Select →  ──────────────→│   → CreateAgent()            │
+│                    Act   │         │   → Threads.CreateThread()   │
+│                          │         │   → Messages.CreateMessage() │
+│  EventBus ← Result  ←──────────── │   → Runs.CreateRun()         │
+└─────────────────────────┘         └──────────────────────────────┘
 ```
 
-This creates an emergent workflow: **Research → Write**, where utility scoring determines the sequencing automatically.
+### Configuration
 
-### Custom Message Extraction
-
-By default, the module extracts messages from the `UserIntent` query slot. You can customize this per agent:
+The `MafClient` supports multiple authentication methods:
 
 ```csharp
-.AddMafAgents(
-    registrations: new[] { /* ... */ },
-    configure: agents =>
-    {
-        agents.Register(agent, "my-agent",
-            considerations: new IConsideration[] { new MafAgentAvailable("my-agent") },
-            messageProvider: rt =>
-            {
-                // Read from EventBus, compose from history, etc.
-                var userMsg = rt.Bus.GetOrDefault<UserMessage>();
-                return userMsg?.Text ?? "default query";
-            });
-    });
+// Using Azure CLI credentials (default)
+var client = new MafClient("https://your-project.openai.azure.com");
+
+// Using custom credentials
+var client = new MafClient(
+    new Uri("https://your-project.openai.azure.com"),
+    new DefaultAzureCredential()
+);
+```
+
+Set the model deployment name via environment variable:
+```bash
+export MODEL_DEPLOYMENT_NAME="gpt-4"
+```
+
+Or pass it explicitly:
+```csharp
+var client = new MafClient(
+    new Uri("https://your-project.openai.azure.com"),
+    new DefaultAzureCredential(),
+    modelDeploymentName: "gpt-4"
+);
+```
+
+### Agent Caching
+
+Agents created via `CreateAgent()` are automatically cached by name, preventing duplicate agent creation:
+
+```csharp
+var agent1 = mafClient.CreateAgent("assistant", "Instructions");
+var agent2 = mafClient.CreateAgent("assistant", "Different instructions");
+
+// agent1 and agent2 reference the same cached agent
 ```
 
 ### Full Working Example
 
-See the [`Example.Maf/`](../Example.Maf/) project for a complete working demonstration with:
-- Simulated ResearchAgent and WriterAgent
-- Multi-agent orchestration with automatic agent handoff
-- Custom considerations and sensors
-- Console output showing the decision-making process
+See the [`examples/Example.Maf/`](../examples/Example.Maf/) project for a complete working demonstration showing:
+- MAF client initialization
+- Agent creation within proposals
+- Thread and message management
+- Response handling
+- Proper cleanup
 
 ### References
 
-- [Microsoft Agent Framework Documentation](https://learn.microsoft.com/en-us/agent-framework/)
-- [Microsoft.Agents.AI NuGet Package](https://www.nuget.org/packages/Microsoft.Agents.AI.Abstractions)
-- [Agent Framework GitHub](https://github.com/microsoft/agent-framework)
-- [Agent Framework Samples](https://github.com/microsoft/Agent-Framework-Samples)
+- [Azure AI Projects Documentation](https://learn.microsoft.com/en-us/azure/ai-services/agents/)
+- [Azure.AI.Projects NuGet Package](https://www.nuget.org/packages/Azure.AI.Projects)
+- [Azure.AI.Agents.Persistent NuGet Package](https://www.nuget.org/packages/Azure.AI.Agents.Persistent)
 
 ---
 
