@@ -54,24 +54,33 @@ AIAgent writerAgent = CreateWriterAgent();
 // Build orchestrator with MAF agents
 var bus = new EventBus();
 var orchestrator = new UtilityAiOrchestrator(bus: bus)
-    .AddMafAgentSensor(
-        new MafAgentRegistration("research", researchAgent),
-        new MafAgentRegistration("writer", writerAgent))
-    .AddMafAgent(
-        agent: researchAgent,
-        agentName: "research",
-        considerations: new IConsideration[]
+    .AddMafAgents(
+        registrations: new[]
         {
-            new MafAgentAvailable("research"),
-            new HasMafAgentResult("research", invert: true) // Not yet researched
-        })
-    .AddMafAgent(
-        agent: writerAgent,
-        agentName: "writer",
-        considerations: new IConsideration[]
+            new MafAgentRegistration("research", researchAgent),
+            new MafAgentRegistration("writer", writerAgent)
+        },
+        configure: agents =>
         {
-            new MafAgentAvailable("writer"),
-            new HasMafAgentResult("research") // Research must be done first
+            // Register Research Agent
+            agents.Register(
+                agent: researchAgent,
+                agentName: "research",
+                considerations: new IConsideration[]
+                {
+                    new MafAgentAvailable("research"),
+                    new HasMafAgentResult("research", invert: true) // Not yet researched
+                });
+
+            // Register Writer Agent
+            agents.Register(
+                agent: writerAgent,
+                agentName: "writer",
+                considerations: new IConsideration[]
+                {
+                    new MafAgentAvailable("writer"),
+                    new HasMafAgentResult("research") // Research must be done first
+                });
         });
 
 await orchestrator.RunAsync(
@@ -88,9 +97,9 @@ Console.WriteLine(result?.Text);
 
 | Component | Purpose |
 |-----------|---------|
-| `MafAgentCapabilityModule` | Wraps a MAF `AIAgent` as a UtilityAI `ICapabilityModule` |
+| `MafAgentCapabilityModule` | Single module representing the MAF orchestration capability. Agents register within this module and each proposes an action. |
 | `MafAgentSensor` | Publishes agent availability to the EventBus each tick |
-| `MafOrchestratorExtensions` | `AddMafAgent()` and `AddMafAgentSensor()` for fluent setup |
+| `MafOrchestratorExtensions` | `AddMafAgents()` for fluent setup with sensor + module registration |
 | `MafAgentAvailable` | Consideration: scores 1.0 if agent is available |
 | `HasMafAgentResult` | Consideration: scores based on existing agent results |
 | `RequiresMafAgent` | Eligibility gate: requires agent to be registered |
@@ -98,43 +107,63 @@ Console.WriteLine(result?.Text);
 | `MafAgentResult` | Published to EventBus after agent execution |
 | `MafAgentCatalog` | Full catalog of registered agents |
 
+### Architecture Pattern
+
+The MAF integration follows the standard UtilityAI pattern:
+
+- **Module = Capability**: `MafAgentCapabilityModule` represents the capability of "MAF agent orchestration"
+- **Proposals = Strategies**: Each registered agent produces one proposal per tick
+- **Actions = Dynamic Behavior**: Actions read current EventBus state, invoke agents, and publish results
+
+This aligns with how other UtilityAI modules work (e.g., `SendMessageModule` proposes multiple messaging strategies).
+
 ### Multi-Agent Workflow
 
 The integration naturally supports multi-agent workflows through utility scoring:
 
 ```csharp
-// Research agent: high utility when research hasn't been done
-.AddMafAgent(researchAgent, "research",
-    considerations: new IConsideration[]
+.AddMafAgents(
+    registrations: new[] { /* ... */ },
+    configure: agents =>
     {
-        new MafAgentAvailable("research"),
-        new HasMafAgentResult("research", invert: true), // Not yet done
-    })
+        // Research agent: high utility when research hasn't been done
+        agents.Register(researchAgent, "research",
+            considerations: new IConsideration[]
+            {
+                new MafAgentAvailable("research"),
+                new HasMafAgentResult("research", invert: true), // Not yet done
+            });
 
-// Writer agent: high utility after research completes
-.AddMafAgent(writerAgent, "writer",
-    considerations: new IConsideration[]
-    {
-        new MafAgentAvailable("writer"),
-        new HasMafAgentResult("research"), // Research done
-    })
+        // Writer agent: high utility after research completes
+        agents.Register(writerAgent, "writer",
+            considerations: new IConsideration[]
+            {
+                new MafAgentAvailable("writer"),
+                new HasMafAgentResult("research"), // Research done
+            });
+    });
 ```
 
 This creates an emergent workflow: **Research → Write**, where utility scoring determines the sequencing automatically.
 
 ### Custom Message Extraction
 
-By default, the module extracts messages from the `UserIntent` query slot. You can customize this:
+By default, the module extracts messages from the `UserIntent` query slot. You can customize this per agent:
 
 ```csharp
-.AddMafAgent(agent, "my-agent",
-    considerations: new IConsideration[] { new MafAgentAvailable("my-agent") },
-    messageProvider: rt =>
+.AddMafAgents(
+    registrations: new[] { /* ... */ },
+    configure: agents =>
     {
-        // Read from EventBus, compose from history, etc.
-        var userMsg = rt.Bus.GetOrDefault<UserMessage>();
-        return userMsg?.Text ?? "default query";
-    })
+        agents.Register(agent, "my-agent",
+            considerations: new IConsideration[] { new MafAgentAvailable("my-agent") },
+            messageProvider: rt =>
+            {
+                // Read from EventBus, compose from history, etc.
+                var userMsg = rt.Bus.GetOrDefault<UserMessage>();
+                return userMsg?.Text ?? "default query";
+            });
+    });
 ```
 
 ### Full Working Example
