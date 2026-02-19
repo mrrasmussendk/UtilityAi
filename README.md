@@ -1,7 +1,7 @@
 # 🧠 UtilityAI Framework (.NET 8)
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
-[![Tests](https://img.shields.io/badge/tests-197%20passing-brightgreen)](./Tests/)
+[![Tests](https://img.shields.io/badge/tests-203%20passing-brightgreen)](./Tests/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A lightweight, modular framework for building AI agent orchestration systems using classic **Utility AI** decision-making patterns. The framework scores candidate actions each tick and executes the highest-utility option based on current context—no hardcoded workflows required.
@@ -13,7 +13,8 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 ## ✨ Features
 
 - 🎯 **Utility-Based Decision Making** - Actions compete based on dynamic scoring
-- 🧠 **LLM Intent Interpretation** (NEW!) - Use LLMs to analyze user messages and publish structured facts - the utility system does the rest
+- 🧠 **LLM Intent Interpretation with Rich Parameters** (NEW!) - Proposals declare what parameters they need, LLMs provide structured data, utility system scores automatically
+- 🎨 **Self-Documenting Intent Matching** (NEW!) - Framework exposes capability metadata for LLM prompt generation - closed loop between code and AI
 - 🏷️ **Attribute-Based Registration** - Java-style annotations for declarative module configuration
 - 🔗 **Microsoft Agent Framework (MAF) Integration** - Utility-based orchestration of MAF agents
 - 📝 **Event History** - Access timestamped event history for LLM conversation context
@@ -21,7 +22,7 @@ A lightweight, modular framework for building AI agent orchestration systems usi
 - 🏗️ **Scoped State** - Isolate multi-agent state while sharing global facts
 - 🔌 **Pluggable Architecture** - Sensors, modules, and considerations are fully extensible
 - 📊 **Built-in Observability** - Sinks for logging, metrics, and testing
-- 🧪 **Well Tested** - 197 comprehensive tests covering all core functionality
+- 🧪 **Well Tested** - 203 comprehensive tests covering all core functionality
 - 💾 **Memory Management** - Two-tier memory with automatic archival from EventBus to long-term storage
 - 📚 **Production Ready** - Thread-safe, documented, with integration guides
 
@@ -110,12 +111,13 @@ await orchestrator.RunAsync(intent, maxTicks: 5, CancellationToken.None);
 
 See the [Example.Maf](./Example.Maf/) project and [MAF Integration Guide](./docs/INTEGRATION.md#microsoft-agent-framework-maf-integration) for details.
 
-### 🆕 LLM Intent Interpretation
+### 🆕 LLM Intent Interpretation with Rich Parameters
 
-Bootstrap your agent with intelligent intent analysis - let the LLM interpret user messages into structured facts, then let the utility system naturally react:
+Bootstrap your agent with intelligent intent analysis - let the LLM interpret user messages into structured facts with **rich parameters**, then let proposals score based on those parameters:
 
 ```csharp
 using UtilityAi.Sensor.LLM;
+using UtilityAi.Consideration.Intent;
 
 // 1. Create LLM client adapter
 public class YourLlmAdapter : ILlmClient
@@ -133,31 +135,124 @@ var llmClient = new YourLlmAdapter();
 var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddSensor(LlmIntentSensor.ForMessageType<UserMessage>(
         llmClient,
-        msg => msg.Text  // Extract text from your message type
+        msg => msg.Text,
+        includeCapabilities: true  // Include proposal metadata in LLM prompt
     ))
-    .AddModule(new YourModule());
+    .AddModule(new TicketModule());
 
-// 3. Modules react to published IntentAnalysis facts
-public class QueryModule : ICapabilityModule
+// 3. Proposals declare intent patterns AND parameters they need
+public class TicketModule : ICapabilityModule
 {
     public IEnumerable<Proposal> Propose(Runtime rt)
     {
-        var analysis = rt.Bus.GetOrDefault<IntentAnalysis>();
+        // Declare what intent this handles and what parameters it needs
+        yield return ProposalHelper.For("ticket.create.priority")
+            .WithDescription("Create high-priority support ticket")
+            .ForIntent("ticket.create", IntentMatchType.Exact)
 
-        yield return ProposalHelper.For("execute-query")
+            // Declare parameters with types, ranges, and descriptions
+            .ScoreByIntentParameter(
+                paramName: "urgency",
+                curve: x => Math.Pow(x, 3),  // Cubic - heavily favor high urgency
+                range: (0, 1),
+                description: "How urgent the issue is (0=low, 1=critical)")
+
+            .UsesIntentParameter(
+                name: "customer_tier",
+                type: "string",
+                description: "Customer subscription level",
+                allowedValues: new[] { "free", "premium", "enterprise" })
+
             .WithConsideration(new SignalConsideration<IntentAnalysis>(
-                "query-intent",
-                a => a.Intent.StartsWith("query.") ? 1.0 : 0.0,
+                "customer-tier-bonus",
+                intent => intent.GetParameter<string>("customer_tier") switch
+                {
+                    "enterprise" => 1.0,
+                    "premium" => 0.85,
+                    _ => 0.65
+                },
                 x => x,
                 (0, 1)))
-            .WithAction(async ct => { /* execute query */ });
+
+            .WithAction(async ct => await CreatePriorityTicket(rt, ct));
+    }
+}
+
+// 4. LLM sees metadata and provides structured parameters
+// GetCapabilitiesInfo() exposes what parameters each proposal needs:
+var capabilities = orchestrator.GetCapabilitiesInfo(rt);
+// Use this to build LLM prompt: "Provide these parameters: urgency (0-1), customer_tier (free/premium/enterprise)..."
+
+// 5. LLM returns IntentAnalysis with parameters
+var analysis = new IntentAnalysis(
+    Intent: "ticket.create",
+    Entities: new Dictionary<string, object> { ["email"] = "user@example.com" },
+    Confidence: 0.95,
+    Parameters: new Dictionary<string, object>
+    {
+        ["urgency"] = 0.9,              // High urgency
+        ["customer_tier"] = "enterprise" // Premium customer
+    }
+);
+
+// 6. Proposals automatically score based on parameters!
+```
+
+**Flow:**
+1. Proposals declare intent patterns + parameters →
+2. Framework exposes metadata via `GetCapabilitiesInfo()` →
+3. LLM prompt includes required parameters →
+4. LLM provides structured intent with parameters →
+5. Proposals score based on parameters →
+6. Best action wins!
+
+**Benefits:**
+- 🎯 **Self-Documenting**: Proposals declare what they need
+- 🔄 **Closed Loop**: Framework tells LLM what to provide
+- 🎨 **Flexible Scoring**: Different proposals use different parameters
+- 📊 **Type-Safe**: `GetParameter<T>()` with compile-time checking
+- 🧩 **Extensible**: Parameters dictionary holds any structure
+
+**Advanced Example: Multiple Proposals, Different Parameters**
+
+```csharp
+public class MultiIntentModule : ICapabilityModule
+{
+    public IEnumerable<Proposal> Propose(Runtime rt)
+    {
+        // High urgency issues → immediate handling
+        yield return ProposalHelper.For("ticket.create.urgent")
+            .ForIntent("ticket.create")
+            .ScoreByIntentParameter("urgency", x => Math.Pow(x, 3), (0, 1))
+            .WithPrior(0.9)
+            .WithAction(async ct => await HandleUrgent(rt, ct));
+
+        // Low urgency → routine handling
+        yield return ProposalHelper.For("ticket.create.routine")
+            .ForIntent("ticket.create")
+            .ScoreByIntentParameter("urgency", x => 1.0 - x, (0, 1)) // Inverted!
+            .WithPrior(0.6)
+            .WithAction(async ct => await HandleRoutine(rt, ct));
+
+        // Query tickets (different intent, different parameters)
+        yield return ProposalHelper.For("ticket.query")
+            .ForIntent("ticket.query")
+            .UsesIntentParameter("has_ticket_id", "boolean")
+            .WithConsideration(new SignalConsideration<IntentAnalysis>(
+                "has-id",
+                intent => intent.GetParameter<bool>("has_ticket_id") ? 1.0 : 0.2,
+                x => x,
+                (0, 1)))
+            .WithAction(async ct => await QueryTicket(rt, ct));
     }
 }
 ```
 
-**Flow:** User message → LLM extracts intent & entities → Facts published to EventBus → Utility system scores naturally → Right action executes
+**The LLM sees all three proposals and knows:**
+- `ticket.create` needs `urgency` parameter (0-1 number)
+- `ticket.query` needs `has_ticket_id` parameter (boolean)
 
-**Benefits:** LLM doesn't pick actions (utility system does) • Natural integration with existing patterns • Clean separation of concerns
+**See:** [Intent-Based Agent Example](./examples/Example/IntentBasedAgent/) for a complete working demo
 
 ---
 
@@ -226,7 +321,197 @@ The framework follows a **Sense → Propose → Score → Act** loop:
 
 ## 💡 Core Features in Detail
 
-### 1️⃣ Event History
+### 1️⃣ Intent-Based Orchestration (NEW!)
+
+**The Problem:** When building LLM-powered agents, how does the LLM know what parameters each proposal needs to make intelligent scoring decisions?
+
+**The Solution:** Proposals declare their intent requirements and parameters, the framework exposes this metadata, and the LLM provides structured data that proposals use for scoring.
+
+#### How It Works
+
+```csharp
+// Step 1: Proposals declare what they handle
+yield return ProposalHelper.For("ticket.create.priority")
+    .WithDescription("Create high-priority support ticket")
+    .ForIntent("ticket.create", IntentMatchType.Exact)  // What intent pattern
+
+    // Declare parameters with metadata
+    .ScoreByIntentParameter("urgency", x => Math.Pow(x, 3), (0, 1),
+        description: "Issue urgency level")
+    .UsesIntentParameter("customer_tier", "string",
+        allowedValues: new[] { "free", "premium", "enterprise" });
+
+// Step 2: Framework exposes metadata
+var capabilities = orchestrator.GetCapabilitiesInfo(rt);
+foreach (var proposal in capabilities.SelectMany(c => c.PotentialActions))
+{
+    Console.WriteLine($"{proposal.ProposalId}: {proposal.IntentMatch?.Pattern}");
+    foreach (var param in proposal.IntentParameters ?? [])
+    {
+        Console.WriteLine($"  - {param.ParameterName} ({param.Type}): {param.Description}");
+    }
+}
+// Output:
+// ticket.create.priority: ticket.create
+//   - urgency (number): Issue urgency level
+//   - customer_tier (string): Customer subscription level
+
+// Step 3: Build LLM prompt with metadata
+var promptBuilder = new StringBuilder();
+promptBuilder.AppendLine("Analyze the user's message and provide:");
+foreach (var proposal in capabilities.SelectMany(c => c.PotentialActions))
+{
+    if (proposal.IntentMatch == null) continue;
+    promptBuilder.AppendLine($"For intent '{proposal.IntentMatch.Pattern}':");
+    foreach (var param in proposal.IntentParameters ?? [])
+    {
+        promptBuilder.AppendLine($"  - {param.ParameterName}: {param.Description}");
+        if (param.Range != null)
+            promptBuilder.AppendLine($"    Range: {param.Range.Min} to {param.Range.Max}");
+    }
+}
+
+// Step 4: LLM returns structured intent with parameters
+var intent = new IntentAnalysis(
+    Intent: "ticket.create",
+    Entities: new Dictionary<string, object> { ["email"] = "user@example.com" },
+    Confidence: 0.95,
+    Parameters: new Dictionary<string, object>
+    {
+        ["urgency"] = 0.9,
+        ["customer_tier"] = "enterprise"
+    }
+);
+
+// Step 5: Proposals score automatically based on parameters
+// urgency=0.9 → Math.Pow(0.9, 3) = 0.729
+// customer_tier="enterprise" → 1.0 bonus
+// Final utility: high!
+```
+
+#### Key APIs
+
+**Declaring Intent Patterns:**
+```csharp
+.ForIntent("ticket.create", IntentMatchType.Exact)     // Exact match
+.ForIntent("ticket.*", IntentMatchType.Prefix)         // Prefix match
+.ForIntent(".*ticket.*", IntentMatchType.Regex)        // Regex match
+```
+
+**Declaring Parameters:**
+```csharp
+// Declare AND add consideration (shorthand)
+.ScoreByIntentParameter(
+    paramName: "urgency",
+    curve: x => x * x,
+    range: (0, 1),
+    description: "How urgent is this")
+
+// Declare only (use in custom consideration)
+.UsesIntentParameter(
+    name: "customer_tier",
+    type: "string",
+    allowedValues: new[] { "free", "premium", "enterprise" })
+```
+
+**Accessing Parameters:**
+```csharp
+var intent = rt.Bus.GetOrDefault<IntentAnalysis>();
+
+// Type-safe access
+double urgency = intent.GetParameter<double>("urgency", defaultValue: 0.5);
+string tier = intent.GetParameter<string>("customer_tier", "free");
+bool flag = intent.GetParameter<bool>("requires_human", false);
+
+// Convenience methods
+if (intent.ParameterAbove("urgency", 0.9))
+    Console.WriteLine("Critical issue!");
+```
+
+#### Real-World Example: Support Ticket Bot
+
+```csharp
+public class TicketModule : ICapabilityModule
+{
+    public IEnumerable<Proposal> Propose(Runtime rt)
+    {
+        // Critical issues → immediate escalation
+        yield return ProposalHelper.For("ticket.escalate")
+            .WithDescription("Escalate critical issues to human agent")
+            .ForIntent("ticket.*", IntentMatchType.Prefix)
+            .ScoreByIntentParameter("urgency", x => x > 0.9 ? 1.0 : 0.0, (0, 1),
+                "Escalate when urgency > 0.9")
+            .UsesIntentParameter("requires_human", "boolean")
+            .WithConsideration(new SignalConsideration<IntentAnalysis>(
+                "needs-human",
+                intent => intent.GetParameter<bool>("requires_human") ||
+                         intent.ParameterAbove("urgency", 0.95) ? 1.0 : 0.1,
+                x => x, (0, 1)))
+            .WithAction(async ct => await EscalateToHuman(rt, ct));
+
+        // Enterprise customers → priority handling
+        yield return ProposalHelper.For("ticket.create.enterprise")
+            .ForIntent("ticket.create")
+            .ScoreByIntentParameter("urgency", x => x * x, (0, 1))
+            .WithConsideration(new SignalConsideration<IntentAnalysis>(
+                "is-enterprise",
+                intent => intent.GetParameter<string>("customer_tier") == "enterprise" ? 1.0 : 0.0,
+                x => x, (0, 1)))
+            .WithAction(async ct => await CreatePriorityTicket(rt, ct));
+
+        // Routine tickets → standard queue
+        yield return ProposalHelper.For("ticket.create.routine")
+            .ForIntent("ticket.create")
+            .ScoreByIntentParameter("urgency", x => 1.0 - x, (0, 1), "Inverted - prefer low urgency")
+            .WithPrior(0.5)
+            .WithAction(async ct => await CreateRoutineTicket(rt, ct));
+    }
+}
+```
+
+**User Message:**
+```
+"Our production API is down! We're an enterprise customer and losing revenue."
+```
+
+**LLM Analysis (using capability metadata):**
+```json
+{
+  "intent": "ticket.create",
+  "confidence": 0.98,
+  "entities": {
+    "issue_type": "api_outage",
+    "environment": "production"
+  },
+  "parameters": {
+    "urgency": 1.0,
+    "customer_tier": "enterprise",
+    "requires_human": false
+  }
+}
+```
+
+**Scoring Results:**
+- `ticket.escalate`: utility = 0.95 (urgency=1.0, threshold met)
+- `ticket.create.enterprise`: utility = 0.92 (urgency=1.0, is enterprise)
+- `ticket.create.routine`: utility = 0.1 (inverted urgency = 0.0)
+
+**Winner:** `ticket.escalate` (highest utility) ✅
+
+#### Benefits
+
+✅ **Self-Documenting** - Proposals declare what they need, no separate documentation
+✅ **Closed Loop** - Framework tells LLM what to provide
+✅ **Flexible** - Different proposals use different parameters for same intent
+✅ **Type-Safe** - Compile-time checking with `GetParameter<T>()`
+✅ **Extensible** - Parameters dictionary holds any structure
+✅ **Testable** - Mock IntentAnalysis with specific parameters
+
+[See complete example →](./examples/Example/IntentBasedAgent/)
+
+---
+
+### 2️⃣ Event History
 
 Access timestamped history of published facts - perfect for building LLM conversation context:
 

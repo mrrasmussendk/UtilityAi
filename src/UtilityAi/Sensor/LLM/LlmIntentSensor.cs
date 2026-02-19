@@ -206,8 +206,39 @@ public sealed class LlmIntentSensor : ISensor
 public sealed record IntentAnalysis(
     string Intent,
     IReadOnlyDictionary<string, object> Entities,
-    double Confidence
-);
+    double Confidence,
+    IReadOnlyDictionary<string, object>? Parameters = null
+)
+{
+    /// <summary>
+    /// Gets a typed parameter value from the Parameters dictionary.
+    /// Returns defaultValue if the parameter is missing or cannot be cast to T.
+    /// </summary>
+    public T? GetParameter<T>(string name, T? defaultValue = default)
+    {
+        if (Parameters?.TryGetValue(name, out var value) == true && value is T typed)
+            return typed;
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// Checks if a numeric parameter is above a threshold.
+    /// Returns false if parameter is missing or not numeric.
+    /// </summary>
+    public bool ParameterAbove(string name, double threshold)
+    {
+        return GetParameter<double>(name, 0) > threshold;
+    }
+
+    /// <summary>
+    /// Checks if a numeric parameter is below a threshold.
+    /// Returns false if parameter is missing or not numeric.
+    /// </summary>
+    public bool ParameterBelow(string name, double threshold)
+    {
+        return GetParameter<double>(name, double.MaxValue) < threshold;
+    }
+};
 
 /// <summary>
 /// Fact containing a snapshot of available capabilities.

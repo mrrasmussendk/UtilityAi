@@ -16,6 +16,18 @@ public sealed class Proposal
     public string? Description { get; init; }  // Human-readable description of what this action does
 
     /// <summary>
+    /// Intent matching specification for LLM-based orchestration.
+    /// Describes what intent pattern this proposal handles.
+    /// </summary>
+    public Intent.IntentMatchSpec? IntentMatch { get; init; }
+
+    /// <summary>
+    /// Intent parameters this proposal uses for scoring.
+    /// Used to build LLM prompts and validate intent analysis.
+    /// </summary>
+    public IReadOnlyList<Intent.IntentParameterUsage>? IntentParameters { get; init; }
+
+    /// <summary>
     /// 
     /// </summary>
     /// <param name="id"></param>

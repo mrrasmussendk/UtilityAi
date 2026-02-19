@@ -1,3 +1,5 @@
+using UtilityAi.Consideration.Intent;
+
 namespace UtilityAi.Orchestration;
 
 /// <summary>
@@ -21,5 +23,7 @@ public sealed record ProposalInfo(
     IReadOnlyList<string> ConsiderationNames,
     IReadOnlyList<string> EligibilityNames,
     bool NoRepeat,
-    string? JsonOutput
+    string? JsonOutput,
+    IntentMatchSpec? IntentMatch = null,
+    IReadOnlyList<IntentParameterUsage>? IntentParameters = null
 );

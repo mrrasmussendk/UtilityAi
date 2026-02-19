@@ -150,7 +150,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
 
     private async Task SenseAsyncAll(Runtime rt, CancellationToken ct)
     {
-        foreach (var s in _sensors) await s.SenseAsync(rt, ct);
+        await Task.WhenAll(_sensors.Select(s => s.SenseAsync(rt, ct)));
     }
 
     private static bool TryStopFromSensors(Runtime rt, IOrchestrationSink sink)
@@ -243,7 +243,9 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
                 ConsiderationNames: p.Considerations.Select(c => c.Name).ToList(),
                 EligibilityNames: p.Eligibilities.Select(e => e.GetType().Name).ToList(),
                 NoRepeat: p.NoRepeat,
-                JsonOutput: p.JsonOutput
+                JsonOutput: p.JsonOutput,
+                IntentMatch: p.IntentMatch,
+                IntentParameters: p.IntentParameters
             )).ToList();
 
             return new CapabilityInfo(moduleName, moduleTypeName, proposals);

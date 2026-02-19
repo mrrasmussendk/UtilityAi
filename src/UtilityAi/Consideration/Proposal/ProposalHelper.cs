@@ -1,4 +1,7 @@
 using UtilityAi.Consideration;
+using UtilityAi.Consideration.General;
+using UtilityAi.Consideration.Intent;
+using UtilityAi.Sensor.LLM;
 using UtilityAi.Utils;
 
 namespace UtilityAi.Capabilities;
@@ -26,6 +29,8 @@ public sealed class ProposalBuilder
     private double _prior = 1.0;
     private double _temperature = 1.0;
     private string? _description;
+    private IntentMatchSpec? _intentMatch;
+    private readonly List<IntentParameterUsage> _intentParameters = new();
 
     internal ProposalBuilder(string id)
     {
@@ -97,6 +102,67 @@ public sealed class ProposalBuilder
     }
 
     /// <summary>
+    /// Declares what intent pattern this proposal handles.
+    /// Used for LLM prompt generation and intent-based filtering.
+    /// </summary>
+    public ProposalBuilder ForIntent(string pattern, IntentMatchType matchType = IntentMatchType.Exact)
+    {
+        _intentMatch = new IntentMatchSpec(pattern, matchType);
+        return this;
+    }
+
+    /// <summary>
+    /// Declares that this proposal uses an intent parameter.
+    /// Registers metadata for LLM prompt generation without adding a consideration.
+    /// </summary>
+    public ProposalBuilder UsesIntentParameter(
+        string name,
+        string type,
+        string? description = null,
+        ValueRange? range = null,
+        string[]? allowedValues = null)
+    {
+        _intentParameters.Add(new IntentParameterUsage(
+            ParameterName: name,
+            Type: type,
+            Description: description,
+            Range: range,
+            AllowedValues: allowedValues
+        ));
+        return this;
+    }
+
+    /// <summary>
+    /// Declares an intent parameter AND adds a consideration that scores based on it.
+    /// Shorthand for UsesIntentParameter + WithConsideration.
+    /// </summary>
+    public ProposalBuilder ScoreByIntentParameter(
+        string paramName,
+        Func<double, double> curve,
+        (double min, double max) range,
+        string? description = null)
+    {
+        // Register parameter metadata
+        _intentParameters.Add(new IntentParameterUsage(
+            ParameterName: paramName,
+            Type: "number",
+            Description: description,
+            Range: new ValueRange(range.min, range.max),
+            ConsiderationName: $"intent-param-{paramName}"
+        ));
+
+        // Add consideration that uses it
+        _considerations.Add(new SignalConsideration<IntentAnalysis>(
+            name: $"intent-param-{paramName}",
+            selector: intent => intent.GetParameter<double>(paramName, 0),
+            curve: curve,
+            inputDomain: range
+        ));
+
+        return this;
+    }
+
+    /// <summary>
     /// Builds the proposal.
     /// </summary>
     public Proposal Build()
@@ -113,7 +179,9 @@ public sealed class ProposalBuilder
         {
             Prior = _prior,
             Temperature = _temperature,
-            Description = _description
+            Description = _description,
+            IntentMatch = _intentMatch,
+            IntentParameters = _intentParameters.Count > 0 ? _intentParameters : null
         };
     }
 
