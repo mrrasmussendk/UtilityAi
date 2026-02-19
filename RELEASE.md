@@ -91,7 +91,7 @@ The current versions are stored in each project's `.csproj`:
 
 - `UtilityAi/UtilityAi.csproj`:
   ```xml
-  <Version>1.3.0</Version>
+  <Version>1.2.4</Version>
   ```
 - `UtilityAi.Maf/UtilityAi.Maf.csproj`:
   ```xml
