@@ -52,6 +52,28 @@ public class EventBusV2Tests
     }
 
     [Fact]
+    public void GetHistory_WithZeroMaxItems_ReturnsEmpty()
+    {
+        var bus = new EventBus();
+        bus.Publish(new TestMessage("msg-1"));
+
+        var history = bus.GetHistory<TestMessage>(maxItems: 0);
+
+        Assert.Empty(history);
+    }
+
+    [Fact]
+    public void GetHistory_WithNegativeMaxItems_ReturnsEmpty()
+    {
+        var bus = new EventBus();
+        bus.Publish(new TestMessage("msg-1"));
+
+        var history = bus.GetHistory<TestMessage>(maxItems: -1);
+
+        Assert.Empty(history);
+    }
+
+    [Fact]
     public void GetHistory_RespectsMaxHistoryPerType()
     {
         var bus = new EventBus(maxHistoryPerType: 5);
