@@ -25,6 +25,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
+      is_new_version: ${{ steps.get_version.outputs.IS_NEW_VERSION }}
 
     steps:
     - uses: actions/checkout@v4
@@ -50,16 +53,26 @@ jobs:
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          echo "IS_NEW_VERSION=false" >> $GITHUB_OUTPUT
           echo "Using manual version: ${{ inputs.version }}"
         elif [[ "${{ github.ref }}" =~ ^refs/tags/v ]]; then
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "IS_NEW_VERSION=false" >> $GITHUB_OUTPUT
           echo "Using tag version: $VERSION"
         else
-          # Use version from csproj for non-release builds
+          # Use version from csproj
           VERSION=$(grep -oP '<Version>\K[^<]+' ./src/UtilityAi/UtilityAi.csproj)
-          echo "VERSION=$VERSION-preview.$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
-          echo "Using preview version: $VERSION-preview.$(date +%Y%m%d%H%M%S)"
+          # Check if this version already has a tag (auto-release detection)
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" = "push" ] && ! git tag -l "v$VERSION" | grep -q .; then
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "IS_NEW_VERSION=true" >> $GITHUB_OUTPUT
+            echo "New version detected: $VERSION - will auto-release"
+          else
+            echo "VERSION=$VERSION-preview.$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+            echo "IS_NEW_VERSION=false" >> $GITHUB_OUTPUT
+            echo "Using preview version: $VERSION-preview.$(date +%Y%m%d%H%M%S)"
+          fi
         fi
 
     - name: Pack UtilityAi
@@ -80,7 +93,10 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.create_release == true) ||
+      needs.build.outputs.is_new_version == 'true'
 
     steps:
     - uses: actions/checkout@v4
@@ -91,10 +107,16 @@ jobs:
         name: nuget-packages
         path: ./artifacts
 
+    - name: Create tag for auto-release
+      if: needs.build.outputs.is_new_version == 'true'
+      run: |
+        git tag "v${{ needs.build.outputs.version }}"
+        git push origin "v${{ needs.build.outputs.version }}"
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
+        tag_name: v${{ needs.build.outputs.version }}
         files: ./artifacts/*.nupkg
         generate_release_notes: true
       env:
