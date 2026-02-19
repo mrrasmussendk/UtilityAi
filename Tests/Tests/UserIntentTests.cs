@@ -75,4 +75,35 @@ public class UserIntentTests
 
         Assert.Equal(intent1, intent2);
     }
+
+    [Fact]
+    public void UserIntent_ForGoal_CreatesIntentWithGoalName()
+    {
+        var slots = new Dictionary<string, object?> { ["priority"] = 2 };
+        var intent = UserIntent.ForGoal("triage", slots, "req-7", "en-US");
+
+        Assert.Equal("triage", intent.Goal.Name);
+        Assert.Equal(2, intent.GetSlotOrDefault<int>("priority"));
+        Assert.Equal("req-7", intent.RequestId);
+        Assert.Equal("en-US", intent.Locale);
+    }
+
+    [Fact]
+    public void UserIntent_FromQuery_StoresQueryAndExposesQueryProperty()
+    {
+        var intent = UserIntent.FromQuery("find invoices", goalName: "search");
+
+        Assert.Equal("search", intent.Goal.Name);
+        Assert.Equal("find invoices", intent.Query);
+        Assert.True(intent.TryGetSlot<string>("query", out var query));
+        Assert.Equal("find invoices", query);
+    }
+
+    [Fact]
+    public void UserIntent_TryGetSlot_WrongType_ReturnsFalse()
+    {
+        var intent = UserIntent.ForGoal("test", new Dictionary<string, object?> { ["count"] = 3 });
+
+        Assert.False(intent.TryGetSlot<string>("count", out _));
+    }
 }

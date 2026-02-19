@@ -56,7 +56,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddModule(new MyCapabilityModule());
 
 // Run the orchestration loop
-var intent = new UserIntent(new IntentGoal("my-goal"));
+var intent = UserIntent.ForGoal("my-goal");
 await orchestrator.RunAsync(intent, maxTicks: 10, CancellationToken.None);
 ```
 
