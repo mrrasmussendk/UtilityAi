@@ -46,6 +46,7 @@ public sealed record UserIntent(
 
     /// <summary>
     /// Attempts to read a typed value from the slot bag.
+    /// Returns <see langword="false"/> when the slot is missing or cannot be cast to <typeparamref name="T"/>.
     /// </summary>
     public bool TryGetSlot<T>(string slotName, out T? value)
     {
