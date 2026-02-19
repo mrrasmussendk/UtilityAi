@@ -178,46 +178,86 @@ The `MafRequestExtensions` class provides helper methods to easily configure str
 
 ```csharp
 using UtilityAi.Helpers.OpenAiStructuredOutputHelper;
+using UtilityAi.Helpers.OpenAiStructuredOutputHelper.SchemaGenerator;
+using UtilityAi.Helpers.OpenAiStructuredOutputHelper.Strategy;
 using UtilityAi.Maf;
 using Azure.AI.Projects.OpenAI;
+using System.Text.Json;
 
-// Define your response model
-public record MathStep
-{
-    public string Explanation { get; init; } = string.Empty;
-    public string Output { get; init; } = string.Empty;
-}
-
+// Define your response model using regular properties (not positional records)
 public record MathReasoning
 {
     public MathStep[] Steps { get; init; } = Array.Empty<MathStep>();
     public string FinalAnswer { get; init; } = string.Empty;
 }
 
-// Build options using AiRequestBuilder
+public record MathStep
+{
+    public string Explanation { get; init; } = string.Empty;
+    public string Output { get; init; } = string.Empty;
+}
+
+// Helper wrapper for the "output" array structure
+public record OutputWrapper<T>
+{
+    public T[] Output { get; init; } = Array.Empty<T>();
+}
+
+// IMPORTANT: Use RequiredStrategy.AllProperties for strict schema validation
+var schemaOptions = new SchemaGeneratorOptions
+{
+    RequiredStrategy = RequiredStrategy.AllProperties
+};
+
+// Method 1: Build and execute in one line using CompleteAzureOpenAiChat extension
+var chatClient = mafClient.GetOpenAiResponseClient();
+var completion = AiRequestBuilder.Create()
+    .WithModel("gpt-4")
+    .AddSystem("You are a math expert. Answer using clear step-by-step reasoning.")
+    .AddUser("How can I solve 8x + 7 = -23?")
+    .WithJsonSchemaFrom<MathReasoning>("math_reasoning", schemaOptions)
+    .CompleteAzureOpenAiChat(chatClient);
+
+// Method 2: Get options and messages separately for more control
 var options = AiRequestBuilder.Create()
     .WithModel("gpt-4")
+    .AddSystem("You are a math expert.")
     .AddUser("How can I solve 8x + 7 = -23?")
-    .WithJsonSchemaFrom<MathStep>("math_reasoning")
-    .ToChatCompletionOptions();
+    .WithJsonSchemaFrom<MathReasoning>("math_reasoning", schemaOptions)
+    .ToAzureOpenAiChatOptions(out var messages);
 
-// Use with MAF chat client
-var chatClient = mafClient.GetOpenAiResponseClient();
-var completion = chatClient.CompleteChat(
-    [new UserChatMessage("How can I solve 8x + 7 = -23?")],
-    options
-);
+var completion = chatClient.CompleteChat(messages, options);
+
+// Parse the structured response
+// The response format is: { "output": [ { "steps": [...], "finalAnswer": "..." } ] }
+var content = completion.Content[0].Text;
+var result = JsonSerializer.Deserialize<OutputWrapper<MathReasoning>>(content);
+var reasoning = result.Output[0];
+
+Console.WriteLine($"Final Answer: {reasoning.FinalAnswer}");
+foreach (var step in reasoning.Steps)
+{
+    Console.WriteLine($"- {step.Explanation}: {step.Output}");
+}
 ```
 
 #### Direct Helper Methods
 
 ```csharp
 using UtilityAi.Maf;
+using UtilityAi.Helpers.OpenAiStructuredOutputHelper.SchemaGenerator;
+using UtilityAi.Helpers.OpenAiStructuredOutputHelper.Strategy;
 using System.Text.Json.Nodes;
 
-// Method 1: Create from .NET type
-var options = MafRequestExtensions.CreateStructuredOptions<MathStep>(
+// Method 1: Create from .NET type with AllProperties strategy
+var schemaOptions = new SchemaGeneratorOptions
+{
+    RequiredStrategy = RequiredStrategy.AllProperties
+};
+
+var options = MafRequestExtensions.CreateStructuredOptions<MathReasoning>(
     schemaName: "math_reasoning",
+    options: schemaOptions,
     strict: true
 );
 

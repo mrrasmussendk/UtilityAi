@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Azure.AI.Projects.OpenAI;
 using OpenAI.Chat;
 using UtilityAi.Helpers.OpenAiStructuredOutputHelper;
@@ -12,16 +15,17 @@ namespace UtilityAi.Maf;
 public static class MafRequestExtensions
 {
     /// <summary>
-    /// Converts an AiRequestBuilder to ChatCompletionOptions with structured output for MAF.
+    /// Converts an AiRequestBuilder to Azure OpenAI ChatCompletionOptions with structured output for MAF.
     /// </summary>
     /// <param name="builder">The AiRequestBuilder instance</param>
+    /// <param name="messages">Output parameter containing the list of chat messages</param>
     /// <returns>ChatCompletionOptions configured with the JSON schema from the builder</returns>
     /// <exception cref="InvalidOperationException">Thrown when no JSON schema format is configured</exception>
-    public static ChatCompletionOptions ToChatCompletionOptions(this AiRequestBuilder builder)
+    public static ChatCompletionOptions ToAzureOpenAiChatOptions(this AiRequestBuilder builder, out List<ChatMessage> messages)
     {
         var json = builder.BuildJson();
         var requestEnvelope = System.Text.Json.JsonSerializer.Deserialize<JsonObject>(json);
-        
+
         if (requestEnvelope?["text"]?["format"] is not JsonObject formatObj)
         {
             throw new InvalidOperationException("No JSON schema format configured in AiRequestBuilder");
@@ -32,7 +36,28 @@ public static class MafRequestExtensions
         var strict = formatObj["strict"]?.GetValue<bool>() ?? true;
 
         var schemaBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(schema);
-        
+
+        // Extract messages
+        messages = new List<ChatMessage>();
+        if (requestEnvelope?["messages"] is JsonArray messagesArray)
+        {
+            foreach (var msg in messagesArray)
+            {
+                var role = msg?["role"]?.GetValue<string>();
+                var content = msg?["content"]?.GetValue<string>();
+
+                if (role != null && content != null)
+                {
+                    messages.Add(role switch
+                    {
+                        "system" => new SystemChatMessage(content),
+                        "user" => new UserChatMessage(content),
+                        _ => throw new InvalidOperationException($"Unsupported message role: {role}")
+                    });
+                }
+            }
+        }
+
         return new ChatCompletionOptions
         {
             ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
@@ -50,14 +75,20 @@ public static class MafRequestExtensions
     /// <param name="options">Schema generation options</param>
     /// <param name="strict">Whether to use strict schema validation</param>
     /// <returns>ChatCompletionOptions configured with the generated schema</returns>
+    /// <remarks>
+    /// WARNING: Properties without [JsonPropertyName] attributes may not serialize as expected.
+    /// Ensure your type's properties have explicit [JsonPropertyName] attributes for proper JSON mapping.
+    /// </remarks>
     public static ChatCompletionOptions CreateStructuredOptions<T>(
         string schemaName,
         SchemaGeneratorOptions? options = null,
         bool strict = true)
     {
+        CheckTypeForJsonPropertyAttributes<T>();
+
         var schema = JsonSchemaGenerator.BuildOutputArraySchemaFrom<T>(options);
         var schemaBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(schema);
-        
+
         return new ChatCompletionOptions
         {
             ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
@@ -80,7 +111,7 @@ public static class MafRequestExtensions
         bool strict = true)
     {
         var schemaBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(schema);
-        
+
         return new ChatCompletionOptions
         {
             ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(
@@ -88,5 +119,65 @@ public static class MafRequestExtensions
                 jsonSchema: BinaryData.FromBytes(schemaBytes),
                 jsonSchemaIsStrict: strict)
         };
+    }
+
+    /// <summary>
+    /// Executes an Azure OpenAI chat completion request using the AiRequestBuilder configuration.
+    /// </summary>
+    /// <param name="builder">The AiRequestBuilder instance</param>
+    /// <param name="chatClient">The Azure OpenAI ChatClient to use for the completion</param>
+    /// <returns>ChatCompletion result</returns>
+    public static ChatCompletion CompleteAzureOpenAiChat(this AiRequestBuilder builder, ChatClient chatClient)
+    {
+        var options = builder.ToAzureOpenAiChatOptions(out var messages);
+        return chatClient.CompleteChat(messages, options);
+    }
+
+    /// <summary>
+    /// Checks if a type's properties have JsonPropertyName attributes and emits warnings if not.
+    /// </summary>
+    private static void CheckTypeForJsonPropertyAttributes<T>()
+    {
+        var type = typeof(T);
+
+        // Skip primitive types and common system types
+        if (type.IsPrimitive || type == typeof(string) || type == typeof(decimal) || type == typeof(DateTime))
+            return;
+
+        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+        foreach (var prop in properties)
+        {
+            var hasJsonPropertyName = prop.GetCustomAttribute<JsonPropertyNameAttribute>() != null;
+
+            if (!hasJsonPropertyName)
+            {
+                Debug.WriteLine($"WARNING: Property '{prop.Name}' on type '{type.Name}' does not have a [JsonPropertyName] attribute. " +
+                               "This may cause unexpected JSON serialization behavior with Azure OpenAI structured outputs.");
+            }
+
+            // Recursively check nested types
+            var propType = prop.PropertyType;
+            if (propType.IsClass && propType != typeof(string) && !propType.IsArray)
+            {
+                var checkMethod = typeof(MafRequestExtensions)
+                    .GetMethod(nameof(CheckTypeForJsonPropertyAttributes), BindingFlags.NonPublic | BindingFlags.Static)
+                    ?.MakeGenericMethod(propType);
+
+                checkMethod?.Invoke(null, null);
+            }
+            else if (propType.IsArray)
+            {
+                var elementType = propType.GetElementType();
+                if (elementType?.IsClass == true && elementType != typeof(string))
+                {
+                    var checkMethod = typeof(MafRequestExtensions)
+                        .GetMethod(nameof(CheckTypeForJsonPropertyAttributes), BindingFlags.NonPublic | BindingFlags.Static)
+                        ?.MakeGenericMethod(elementType);
+
+                    checkMethod?.Invoke(null, null);
+                }
+            }
+        }
     }
 }

@@ -36,24 +36,29 @@ public class MafIntegrationTests
     // ─── MafRequestExtensions ────────────────────────────────────
 
     [Fact]
-    public void ToChatCompletionOptions_WithValidSchema_ReturnsOptions()
+    public void ToAzureOpenAiChatOptions_WithValidSchema_ReturnsOptionsAndMessages()
     {
         // Arrange
         var builder = AiRequestBuilder.Create()
             .WithModel("gpt-4")
+            .AddSystem("You are a helpful assistant")
             .AddUser("Test message")
             .WithJsonSchemaFrom<MathStep>("math_reasoning");
 
         // Act
-        var options = builder.ToChatCompletionOptions();
+        var options = builder.ToAzureOpenAiChatOptions(out var messages);
 
         // Assert
         Assert.NotNull(options);
         Assert.NotNull(options.ResponseFormat);
+        Assert.NotNull(messages);
+        Assert.Equal(2, messages.Count);
+        Assert.IsType<OpenAI.Chat.SystemChatMessage>(messages[0]);
+        Assert.IsType<OpenAI.Chat.UserChatMessage>(messages[1]);
     }
 
     [Fact]
-    public void ToChatCompletionOptions_WithoutSchema_ThrowsException()
+    public void ToAzureOpenAiChatOptions_WithoutSchema_ThrowsException()
     {
         // Arrange
         var builder = AiRequestBuilder.Create()
@@ -61,7 +66,7 @@ public class MafIntegrationTests
             .AddUser("Test message");
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => builder.ToChatCompletionOptions());
+        Assert.Throws<InvalidOperationException>(() => builder.ToAzureOpenAiChatOptions(out _));
     }
 
     [Fact]
@@ -112,6 +117,30 @@ public class MafIntegrationTests
         Assert.NotNull(strictOptions);
         Assert.NotNull(nonStrictOptions);
         // Note: ResponseFormat doesn't expose strict property directly, but we verify it doesn't throw
+    }
+
+    [Fact]
+    public void ToAzureOpenAiChatOptions_ExtractsMultipleMessages_Correctly()
+    {
+        // Arrange
+        var builder = AiRequestBuilder.Create()
+            .WithModel("gpt-4")
+            .AddSystem("You are a math expert")
+            .AddUser("What is 2+2?")
+            .AddSystem("Additional instruction")
+            .AddUser("Follow up question")
+            .WithJsonSchemaFrom<MathStep>("math_reasoning");
+
+        // Act
+        var options = builder.ToAzureOpenAiChatOptions(out var messages);
+
+        // Assert
+        Assert.NotNull(messages);
+        Assert.Equal(4, messages.Count);
+        Assert.IsType<OpenAI.Chat.SystemChatMessage>(messages[0]);
+        Assert.IsType<OpenAI.Chat.UserChatMessage>(messages[1]);
+        Assert.IsType<OpenAI.Chat.SystemChatMessage>(messages[2]);
+        Assert.IsType<OpenAI.Chat.UserChatMessage>(messages[3]);
     }
 
     // ─── Test Helpers ────────────────────────────────────────────
