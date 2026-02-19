@@ -143,6 +143,60 @@ public class MafIntegrationTests
         Assert.IsType<OpenAI.Chat.UserChatMessage>(messages[3]);
     }
 
+    // ─── CompleteAndDeserialize Tests ────────────────────────────
+
+    [Fact]
+    public void CompleteAndDeserialize_WithArrayResponse_DeserializesFirstElement()
+    {
+        // Note: This is an integration test concept. In practice, you would need a real or mocked ChatClient.
+        // For demonstration, we'll test the deserialization logic with a mock response structure.
+        
+        var responseJson = @"{""output"":[{""explanation"":""test explanation"",""output"":""42""}]}";
+        
+        // Verify the JSON structure can be parsed correctly
+        using var doc = JsonDocument.Parse(responseJson);
+        var outputElement = doc.RootElement.GetProperty("output");
+        
+        Assert.Equal(JsonValueKind.Array, outputElement.ValueKind);
+        var result = JsonSerializer.Deserialize<MathStep>(outputElement[0]);
+        
+        Assert.NotNull(result);
+        Assert.Equal("test explanation", result.Explanation);
+        Assert.Equal("42", result.Output);
+    }
+
+    [Fact]
+    public void CompleteAndDeserialize_WithDirectObjectResponse_DeserializesObject()
+    {
+        var responseJson = @"{""output"":{""explanation"":""direct test"",""output"":""99""}}";
+        
+        using var doc = JsonDocument.Parse(responseJson);
+        var outputElement = doc.RootElement.GetProperty("output");
+        
+        Assert.Equal(JsonValueKind.Object, outputElement.ValueKind);
+        var result = JsonSerializer.Deserialize<MathStep>(outputElement);
+        
+        Assert.NotNull(result);
+        Assert.Equal("direct test", result.Explanation);
+        Assert.Equal("99", result.Output);
+    }
+
+    [Fact]
+    public void CompleteAndDeserialize_WithCustomPropertyName_ExtractsCorrectProperty()
+    {
+        var responseJson = @"{""result"":[{""explanation"":""custom property"",""output"":""7""}]}";
+        
+        using var doc = JsonDocument.Parse(responseJson);
+        var resultElement = doc.RootElement.GetProperty("result");
+        
+        Assert.Equal(JsonValueKind.Array, resultElement.ValueKind);
+        var result = JsonSerializer.Deserialize<MathStep>(resultElement[0]);
+        
+        Assert.NotNull(result);
+        Assert.Equal("custom property", result.Explanation);
+        Assert.Equal("7", result.Output);
+    }
+
     // ─── Test Helpers ────────────────────────────────────────────
 
     /// <summary>

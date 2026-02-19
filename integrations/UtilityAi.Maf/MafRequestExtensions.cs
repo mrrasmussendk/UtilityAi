@@ -134,6 +134,26 @@ public static class MafRequestExtensions
     }
 
     /// <summary>
+    /// Executes an Azure OpenAI chat completion request and automatically deserializes the response.
+    /// </summary>
+    /// <typeparam name="T">The type to deserialize the response to</typeparam>
+    /// <param name="builder">The AiRequestBuilder instance</param>
+    /// <param name="chatClient">The Azure OpenAI ChatClient to use for the completion</param>
+    /// <param name="propertyName">The JSON property name to extract from the response (default: "output")</param>
+    /// <returns>Deserialized instance of type T</returns>
+    public static T CompleteAndDeserialize<T>(this AiRequestBuilder builder, ChatClient chatClient, string propertyName = "output")
+    {
+        var completion = builder.CompleteAzureOpenAiChat(chatClient);
+        using System.Text.Json.JsonDocument structuredJson = System.Text.Json.JsonDocument.Parse(completion.Content[0].Text);
+        var outputElement = structuredJson.RootElement.GetProperty(propertyName);
+        
+        // Handle both array and direct object cases
+        return outputElement.ValueKind == System.Text.Json.JsonValueKind.Array 
+            ? System.Text.Json.JsonSerializer.Deserialize<T>(outputElement[0])!
+            : System.Text.Json.JsonSerializer.Deserialize<T>(outputElement)!;
+    }
+
+    /// <summary>
     /// Checks if a type's properties have JsonPropertyName attributes and emits warnings if not.
     /// </summary>
     private static void CheckTypeForJsonPropertyAttributes<T>()

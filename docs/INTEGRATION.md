@@ -197,20 +197,29 @@ public record MathStep
     public string Output { get; init; } = string.Empty;
 }
 
-// Helper wrapper for the "output" array structure
-public record OutputWrapper<T>
-{
-    public T[] Output { get; init; } = Array.Empty<T>();
-}
-
 // IMPORTANT: Use RequiredStrategy.AllProperties for strict schema validation
 var schemaOptions = new SchemaGeneratorOptions
 {
     RequiredStrategy = RequiredStrategy.AllProperties
 };
 
-// Method 1: Build and execute in one line using CompleteAzureOpenAiChat extension
 var chatClient = mafClient.GetOpenAiResponseClient();
+
+// Method 1: Simplified approach with automatic deserialization
+var reasoning = AiRequestBuilder.Create()
+    .WithModel("gpt-4")
+    .AddSystem("You are a math expert. Answer using clear step-by-step reasoning.")
+    .AddUser("How can I solve 8x + 7 = -23?")
+    .WithJsonSchemaFrom<MathReasoning>("math_reasoning", schemaOptions)
+    .CompleteAndDeserialize<MathReasoning>(chatClient);
+
+Console.WriteLine($"Final Answer: {reasoning.FinalAnswer}");
+foreach (var step in reasoning.Steps)
+{
+    Console.WriteLine($"- {step.Explanation}: {step.Output}");
+}
+
+// Method 2: Manual deserialization with CompleteAzureOpenAiChat
 var completion = AiRequestBuilder.Create()
     .WithModel("gpt-4")
     .AddSystem("You are a math expert. Answer using clear step-by-step reasoning.")
@@ -218,7 +227,15 @@ var completion = AiRequestBuilder.Create()
     .WithJsonSchemaFrom<MathReasoning>("math_reasoning", schemaOptions)
     .CompleteAzureOpenAiChat(chatClient);
 
-// Method 2: Get options and messages separately for more control
+// Parse the structured response
+// The response format is: { "output": [ { "steps": [...], "finalAnswer": "..." } ] }
+using JsonDocument structuredJson = JsonDocument.Parse(completion.Content[0].Text);
+var reasoningResponse = JsonSerializer.Deserialize<MathReasoning>(
+    structuredJson.RootElement.GetProperty("output")[0]);
+
+Console.WriteLine($"Final Answer: {reasoningResponse.FinalAnswer}");
+
+// Method 3: Get options and messages separately for more control
 var options = AiRequestBuilder.Create()
     .WithModel("gpt-4")
     .AddSystem("You are a math expert.")
@@ -227,18 +244,6 @@ var options = AiRequestBuilder.Create()
     .ToAzureOpenAiChatOptions(out var messages);
 
 var completion = chatClient.CompleteChat(messages, options);
-
-// Parse the structured response
-// The response format is: { "output": [ { "steps": [...], "finalAnswer": "..." } ] }
-var content = completion.Content[0].Text;
-var result = JsonSerializer.Deserialize<OutputWrapper<MathReasoning>>(content);
-var reasoning = result.Output[0];
-
-Console.WriteLine($"Final Answer: {reasoning.FinalAnswer}");
-foreach (var step in reasoning.Steps)
-{
-    Console.WriteLine($"- {step.Explanation}: {step.Output}");
-}
 ```
 
 #### Direct Helper Methods
@@ -288,8 +293,10 @@ var completion = chatClient.CompleteChat(messages, options);
 
 - **Reduced Boilerplate**: No need to manually construct `BinaryData` and `ChatResponseFormat`
 - **Type Safety**: Generate schemas directly from .NET types
+- **Automatic Deserialization**: Use `CompleteAndDeserialize<T>` to execute and deserialize in one step
 - **Reusability**: Leverage existing `AiRequestBuilder` infrastructure
 - **Consistency**: Unified approach across OpenAI and MAF integrations
+- **Flexible**: Choose between automatic deserialization or manual control over the response parsing
 
 ### Full Working Example
 
