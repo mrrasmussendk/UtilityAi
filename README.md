@@ -277,7 +277,7 @@ public class OpenAIModule : ICapabilityModule
 }
 ```
 
-The framework also supports **Azure OpenAI**, **Anthropic Claude**, and any provider you wire up. See the [Integration Guide](./docs/INTEGRATION.md#llm-integration) for complete examples.
+The framework also supports **Azure OpenAI**, **Anthropic Claude**, and any custom provider via the `ILlmProvider` abstraction. See the [Integration Guide](./docs/INTEGRATION.md#llm-integration) for complete examples.
 
 ---
 
