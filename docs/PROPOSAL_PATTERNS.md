@@ -272,7 +272,7 @@ Remember: **Capability modules represent WHAT THE AGENT CAN DO (abilities), not 
 
 ## 📖 Complete Example
 
-See `Example/AgentAssistant/` for a complete AI agent example with:
+See `examples/Example/AgentAssistant/` for a complete AI agent example with:
 - **SendMessageModule** - Responds to user (strategies: direct, clarify, acknowledge)
 - **DoResearchModule** - Gathers information (strategies: web, database, embedded)
 - **FallbackResponseModule** - Handles failures (strategies: decline, low-confidence, emergency)

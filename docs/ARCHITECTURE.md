@@ -398,5 +398,5 @@ using var sub = bus.Subscribe<TaskCompleted>(task => {
 ## Next Steps
 
 - See [INTEGRATION.md](./INTEGRATION.md) for connecting to AI services
-- See [Examples](../Example/) for complete implementations
-- See [API Reference](../UtilityAi/README.md) for detailed API docs
+- See [Examples](../examples/Example/) for complete implementations
+- See the [README](../src/UtilityAi/README.md) for a quick overview
