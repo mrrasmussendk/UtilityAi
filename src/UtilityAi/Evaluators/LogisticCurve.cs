@@ -53,7 +53,7 @@
 
             double k = (L1 - L2) / (a.x - b.x);
             
-            if (!double.IsFinite(k) || Math.Abs(k) <= K_EPSILON)
+            if (!double.IsFinite(k) || Math.Abs(k) < K_EPSILON)
                 throw new ArgumentException("Anchors must have distinct y values relative to their x separation.");
             
             double x0 = a.x - L1 / k;
