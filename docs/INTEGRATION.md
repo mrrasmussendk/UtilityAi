@@ -9,7 +9,7 @@ This guide shows how to integrate the UtilityAI framework with various AI servic
 3. [EventBus Patterns](#eventbus-patterns)
 4. [Multi-Agent Coordination](#multi-agent-coordination)
 5. [State Persistence](#state-persistence)
-5. [Observability & Metrics](#observability--metrics)
+6. [Observability & Metrics](#observability--metrics)
 
 ---
 
@@ -938,5 +938,5 @@ public void Module_ProposesWhenFactExists()
 ## Next Steps
 
 - See [ARCHITECTURE.md](./ARCHITECTURE.md) for framework internals
-- See [Examples](../Example/) for complete working code
-- Check the [API Reference](../UtilityAi/README.md) for detailed API docs
+- See [Examples](../examples/Example/) for complete working code
+- Check the [README](../src/UtilityAi/README.md) for a quick overview

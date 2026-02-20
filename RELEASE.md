@@ -89,11 +89,11 @@ These preview packages:
 
 The current versions are stored in each project's `.csproj`:
 
-- `UtilityAi/UtilityAi.csproj`:
+- `src/UtilityAi/UtilityAi.csproj`:
   ```xml
   <Version>1.2.4</Version>
   ```
-- `UtilityAi.Maf/UtilityAi.Maf.csproj`:
+- `integrations/UtilityAi.Maf/UtilityAi.Maf.csproj`:
   ```xml
   <Version>1.0.0</Version>
   ```
@@ -140,7 +140,7 @@ Use manual workflow dispatch and leave the "Create GitHub release" checkbox unch
 ```bash
 # Update version in csproj
 # Commit changes
-git add UtilityAi/UtilityAi.csproj
+git add src/UtilityAi/UtilityAi.csproj
 git commit -m "Bump version to 1.2.0"
 git push
 
