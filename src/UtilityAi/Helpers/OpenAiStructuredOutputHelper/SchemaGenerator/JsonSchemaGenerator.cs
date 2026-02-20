@@ -141,7 +141,13 @@ public static class JsonSchemaGenerator
             if (keyType == typeof(string))
             {
                 // For Dictionary<string, JsonElement>, use object with additionalProperties: true
-                // to allow dynamic key-value pairs (e.g., entities like "kilometer": 100)
+                // to allow dynamic key-value pairs (e.g., entities like "kilometer": 100).
+                //
+                // IMPORTANT: Using additionalProperties: false here would instruct OpenAI's
+                // structured output to return only empty objects {}, silently dropping all
+                // dynamic keys extracted from the user's message. This was a bug that
+                // prevented IntentAnalysis.Entities and .Parameters from ever being populated.
+                // See: Regression_EntitiesSchema_MustAllowAdditionalProperties_ForDynamicKeys
                 if (valueType == typeof(System.Text.Json.JsonElement))
                 {
                     return (new JsonObject
