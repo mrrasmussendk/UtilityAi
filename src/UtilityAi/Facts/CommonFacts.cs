@@ -3,35 +3,17 @@ namespace UtilityAi.Facts;
 /// <summary>
 /// Current system time.
 /// </summary>
-public sealed record CurrentTime(DateTimeOffset Value)
-{
-    /// <summary>
-    /// Gets the current time value.
-    /// </summary>
-    public DateTimeOffset Time => Value;
-}
+public sealed record CurrentTime(DateTimeOffset Value);
 
 /// <summary>
 /// Current orchestration tick number.
 /// </summary>
-public sealed record TickNumber(int Value)
-{
-    /// <summary>
-    /// Gets the current orchestration tick number.
-    /// </summary>
-    public int Tick => Value;
-}
+public sealed record TickNumber(int Value);
 
 /// <summary>
 /// Elapsed time since orchestration started.
 /// </summary>
-public sealed record ElapsedTime(TimeSpan Value)
-{
-    /// <summary>
-    /// Gets the elapsed orchestration time.
-    /// </summary>
-    public TimeSpan Duration => Value;
-}
+public sealed record ElapsedTime(TimeSpan Value);
 
 /// <summary>
 /// A message from a user.

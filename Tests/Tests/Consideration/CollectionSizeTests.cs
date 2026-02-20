@@ -21,5 +21,7 @@ public class CollectionSizeTests
         var curve = new PowerCurve(new UtilityAi.Evaluators.Range(0, 1), gamma: 1.0);
         Assert.Throws<ArgumentException>(() =>
             new CollectionSize<QueueFact>(f => f.Items.Count, curve, (5, 5)));
+        Assert.Throws<ArgumentException>(() =>
+            new CollectionSize<QueueFact>(f => f.Items.Count, curve, (10, 5)));
     }
 }

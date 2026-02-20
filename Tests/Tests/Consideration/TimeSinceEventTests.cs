@@ -11,5 +11,7 @@ public class TimeSinceEventTests
         var curve = new PowerCurve(new UtilityAi.Evaluators.Range(0, 1), gamma: 1.0);
         Assert.Throws<ArgumentException>(() =>
             new TimeSinceEvent<string>(curve, (10, 10)));
+        Assert.Throws<ArgumentException>(() =>
+            new TimeSinceEvent<string>(curve, (10, 5)));
     }
 }
