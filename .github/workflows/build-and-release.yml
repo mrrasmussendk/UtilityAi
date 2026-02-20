@@ -47,7 +47,13 @@ jobs:
       run: dotnet build --no-restore --configuration Release /p:GenerateDocumentationFile=true
 
     - name: Test
-      run: dotnet test --no-build --configuration Release --verbosity normal
+      run: dotnet test --no-build --configuration Release --verbosity normal --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./TestResults/**/coverage.cobertura.xml
+        fail_ci_if_error: false
 
     - name: Trigger documentation agent
       if: github.event_name == 'pull_request'
