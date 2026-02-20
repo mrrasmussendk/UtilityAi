@@ -131,6 +131,35 @@ public static class JsonSchemaGenerator
             }, !isNullableValue);
         }
 
+        // Handle Dictionary<string, T> as object with additionalProperties
+        if (effective.IsGenericType && effective.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+        {
+            var keyType = effective.GetGenericArguments()[0];
+            var valueType = effective.GetGenericArguments()[1];
+
+            // Only support Dictionary<string, T>
+            if (keyType == typeof(string))
+            {
+                // For Dictionary<string, JsonElement>, allow any object
+                if (valueType == typeof(System.Text.Json.JsonElement))
+                {
+                    return (new JsonObject
+                    {
+                        ["type"] = "object",
+                        ["additionalProperties"] = true
+                    }, false);
+                }
+
+                // For other Dictionary<string, T>, use the value type schema
+                var (valueSchema, _) = SchemaFor(valueType);
+                return (new JsonObject
+                {
+                    ["type"] = "object",
+                    ["additionalProperties"] = valueSchema
+                }, false);
+            }
+        }
+
         // ✅ Only now treat collections as arrays
         if (TryGetEnumerableElement(effective, out var elemType))
         {
