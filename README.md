@@ -77,8 +77,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddModule(new MyCapabilityModule());
 
 // 3. Run the sense → propose → score → act loop
-var intent = UserIntent.ForGoal("my-goal");
-await orchestrator.RunAsync(intent, maxTicks: 10, CancellationToken.None);
+await orchestrator.RunAsync(maxTicks: 10, CancellationToken.None);
 ```
 
 ### Attribute-Based Registration
@@ -288,7 +287,7 @@ An optional web dashboard to visualize proposals, consideration scores, and tick
 ```csharp
 var dashboardState = new DashboardState();
 app.MapUtilityAiDashboard(dashboardState);
-await orchestrator.RunAsync(intent, maxTicks: 10, ct, sink: new DashboardSink(dashboardState));
+await orchestrator.RunAsync(maxTicks: 10, ct, sink: new DashboardSink(dashboardState));
 ```
 
 Navigate to `http://localhost:5000/utilityai/dashboard` to inspect scores, override priors/temperatures, and step through ticks.

@@ -52,7 +52,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus, stopAtZero: false)
     .AddModule(new MyModule2())
     .AddModule(new IdleModule());  // Always add last
 
-await orchestrator.RunAsync(intent, maxTicks: 1000, ct);
+await orchestrator.RunAsync(maxTicks: 1000, ct);
 ```
 
 ### Configuration
@@ -69,7 +69,7 @@ The module is configured with:
 var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddModule(new ProcessTasksModule());
 
-await orchestrator.RunAsync(intent, maxTicks: 1000, ct);
+await orchestrator.RunAsync(maxTicks: 1000, ct);
 // Problem: Stops immediately if no tasks are available
 
 // With IdleModule
@@ -77,7 +77,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus, stopAtZero: false)
     .AddModule(new ProcessTasksModule())
     .AddModule(new IdleModule());
 
-await orchestrator.RunAsync(intent, maxTicks: 1000, ct);
+await orchestrator.RunAsync(maxTicks: 1000, ct);
 // Solution: Idles when no tasks, continues running
 ```
 
@@ -183,7 +183,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
         cooldownPeriod: TimeSpan.FromMinutes(2)
     ));
 
-await orchestrator.RunAsync(intent, maxTicks: 1000, ct);
+await orchestrator.RunAsync(maxTicks: 1000, ct);
 ```
 
 ### How It Works
@@ -330,7 +330,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddModule(new MyModule2())
     .AddModule(new StopOnSignalModule());  // Add for graceful shutdown
 
-await orchestrator.RunAsync(intent, maxTicks: 1000, ct);
+await orchestrator.RunAsync(maxTicks: 1000, ct);
 
 // Elsewhere: trigger shutdown
 bus.Publish(new StopSignal("User requested shutdown"));
@@ -513,7 +513,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus, stopAtZero: false)
     .AddModule(new StopOnSignalModule())
     .AddModule(new IdleModule());  // Always add last
 
-await orchestrator.RunAsync(intent, maxTicks: 10000, ct);
+await orchestrator.RunAsync(maxTicks: 10000, ct);
 ```
 
 **Behavior:**

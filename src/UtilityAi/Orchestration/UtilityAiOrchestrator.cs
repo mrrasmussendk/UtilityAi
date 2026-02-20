@@ -75,7 +75,6 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// <summary>
     /// Runs the orchestration loop for the specified number of ticks or until a stop condition is met.
     /// </summary>
-    /// <param name="intent">The user's intent, available to all sensors and modules via Runtime.</param>
     /// <param name="maxTicks">Maximum number of ticks to execute before stopping.</param>
     /// <param name="ct">Cancellation token to allow early termination.</param>
     /// <param name="sink">Optional sink for observing orchestration events. Uses NullSink if not provided.</param>

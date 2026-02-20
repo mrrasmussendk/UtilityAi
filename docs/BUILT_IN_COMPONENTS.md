@@ -434,7 +434,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus, stopAtZero: false)
     .AddModule(new IdleModule())
     .AddModule(new StopOnSignalModule());
 
-await orchestrator.RunAsync(intent, maxTicks: 100, ct);
+await orchestrator.RunAsync(maxTicks: 100, ct);
 ```
 
 ### Using Memory System

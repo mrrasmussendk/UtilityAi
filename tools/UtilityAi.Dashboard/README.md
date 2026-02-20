@@ -38,7 +38,7 @@ app.MapUtilityAiDashboard(dashboardState);
 app.Run();
 
 // Pass the sink to your orchestrator
-await orchestrator.RunAsync(intent, maxTicks: 10, ct, sink: dashboardSink);
+await orchestrator.RunAsync(maxTicks: 10, ct, sink: dashboardSink);
 ```
 
 ### 3. Open the dashboard
