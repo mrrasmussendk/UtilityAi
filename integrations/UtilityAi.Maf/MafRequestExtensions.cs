@@ -145,12 +145,100 @@ public static class MafRequestExtensions
     {
         var completion = builder.CompleteAzureOpenAiChat(chatClient);
         using System.Text.Json.JsonDocument structuredJson = System.Text.Json.JsonDocument.Parse(completion.Content[0].Text);
-        var outputElement = structuredJson.RootElement.GetProperty(propertyName);
-        
-        // Handle both array and direct object cases
-        return outputElement.ValueKind == System.Text.Json.JsonValueKind.Array 
-            ? System.Text.Json.JsonSerializer.Deserialize<T>(outputElement[0])!
-            : System.Text.Json.JsonSerializer.Deserialize<T>(outputElement)!;
+
+        // Try multiple strategies to find and deserialize the target type
+        var outputElement = FindDeserializableElement<T>(structuredJson.RootElement, propertyName);
+
+        return System.Text.Json.JsonSerializer.Deserialize<T>(outputElement)!;
+    }
+
+    /// <summary>
+    /// Searches for a JSON element that can be deserialized to type T using multiple strategies.
+    /// </summary>
+    private static System.Text.Json.JsonElement FindDeserializableElement<T>(System.Text.Json.JsonElement root, string propertyName)
+    {
+        // Strategy 1: Try the specified property name
+        if (root.TryGetProperty(propertyName, out var namedElement))
+        {
+            var result = TryUnwrapElement(namedElement);
+            if (CanDeserialize<T>(result))
+                return result;
+        }
+
+        // Strategy 2: If root is an array, try first element
+        if (root.ValueKind == System.Text.Json.JsonValueKind.Array && root.GetArrayLength() > 0)
+        {
+            var result = TryUnwrapElement(root[0]);
+            if (CanDeserialize<T>(result))
+                return result;
+        }
+
+        // Strategy 3: Search all properties for a deserializable match
+        if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            foreach (var property in root.EnumerateObject())
+            {
+                var result = TryUnwrapElement(property.Value);
+                if (CanDeserialize<T>(result))
+                    return result;
+            }
+        }
+
+        // Strategy 4: Try root itself (unwrapped)
+        var unwrappedRoot = TryUnwrapElement(root);
+        if (CanDeserialize<T>(unwrappedRoot))
+            return unwrappedRoot;
+
+        // Fallback: return root as-is
+        return root;
+    }
+
+    /// <summary>
+    /// Unwraps JSON strings and arrays to get the actual data element.
+    /// </summary>
+    private static System.Text.Json.JsonElement TryUnwrapElement(System.Text.Json.JsonElement element)
+    {
+        // Unwrap JSON-encoded strings
+        if (element.ValueKind == System.Text.Json.JsonValueKind.String)
+        {
+            var str = element.GetString();
+            if (!string.IsNullOrEmpty(str) && (str.TrimStart().StartsWith("{") || str.TrimStart().StartsWith("[")))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(str);
+                    return doc.RootElement.Clone();
+                }
+                catch
+                {
+                    // Not valid JSON, return as-is
+                }
+            }
+        }
+
+        // Unwrap single-element arrays
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Array && element.GetArrayLength() == 1)
+        {
+            return element[0];
+        }
+
+        return element;
+    }
+
+    /// <summary>
+    /// Checks if a JsonElement can be successfully deserialized to type T.
+    /// </summary>
+    private static bool CanDeserialize<T>(System.Text.Json.JsonElement element)
+    {
+        try
+        {
+            var result = System.Text.Json.JsonSerializer.Deserialize<T>(element);
+            return result != null;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

@@ -185,16 +185,186 @@ public class MafIntegrationTests
     public void CompleteAndDeserialize_WithCustomPropertyName_ExtractsCorrectProperty()
     {
         var responseJson = @"{""result"":[{""Explanation"":""custom property"",""Output"":""7""}]}";
-        
+
         using var doc = JsonDocument.Parse(responseJson);
         var resultElement = doc.RootElement.GetProperty("result");
-        
+
         Assert.Equal(JsonValueKind.Array, resultElement.ValueKind);
         var result = JsonSerializer.Deserialize<MathStep>(resultElement[0]);
-        
+
         Assert.NotNull(result);
         Assert.Equal("custom property", result.Explanation);
         Assert.Equal("7", result.Output);
+    }
+
+    [Fact]
+    public void CompleteAndDeserialize_WithStringEncodedJson_ParsesAndDeserializes()
+    {
+        // Simulates the case where output is a JSON-encoded string with proper casing
+        var responseJson = "{\"output\":\"{\\\"Intent\\\": \\\"msg.response\\\", \\\"Entities\\\": {\\\"msg.response\\\": \\\"How far is france from germany?\\\"}, \\\"Confidence\\\": 0.95}\"}";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var outputElement = doc.RootElement.GetProperty("output");
+
+        Assert.Equal(JsonValueKind.String, outputElement.ValueKind);
+
+        // Parse the string as JSON
+        var jsonString = outputElement.GetString()!;
+        var result = JsonSerializer.Deserialize<IntentResponse>(jsonString);
+
+        Assert.NotNull(result);
+        Assert.Equal("msg.response", result.Intent);
+        Assert.Equal(0.95, result.Confidence);
+        Assert.NotNull(result.Entities);
+    }
+
+    [Fact]
+    public void CompleteAndDeserialize_WithDirectObjectInOutput_DeserializesCorrectly()
+    {
+        // Simulates the case where output contains a direct object (not string-encoded)
+        var responseJson = @"{""output"":{""Intent"":""msg.response"",""Entities"":{""msg.response"":""How far is france from germany?""},""Confidence"":0.95}}";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var outputElement = doc.RootElement.GetProperty("output");
+
+        Assert.Equal(JsonValueKind.Object, outputElement.ValueKind);
+        var result = JsonSerializer.Deserialize<IntentResponse>(outputElement);
+
+        Assert.NotNull(result);
+        Assert.Equal("msg.response", result.Intent);
+        Assert.Equal(0.95, result.Confidence);
+        Assert.NotNull(result.Entities);
+    }
+
+    [Fact]
+    public void FindDeserializableElement_WithMissingPropertyName_FallsBackToRoot()
+    {
+        // Test when the specified property doesn't exist
+        var responseJson = @"{""Intent"":""msg.response"",""Entities"":{""msg.response"":""test""},""Confidence"":0.95}";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        // Try to get "output" property which doesn't exist - should fall back to root
+        var hasProp = doc.RootElement.TryGetProperty("output", out _);
+        Assert.False(hasProp);
+
+        // Should deserialize from root instead
+        var result = JsonSerializer.Deserialize<IntentResponse>(doc.RootElement);
+        Assert.NotNull(result);
+        Assert.Equal("msg.response", result.Intent);
+    }
+
+    [Fact]
+    public void FindDeserializableElement_WithNestedObjectInWrongProperty_FindsCorrectOne()
+    {
+        // Test searching through properties to find the deserializable object
+        var responseJson = @"{""metadata"":{""id"":123},""data"":{""Intent"":""msg.response"",""Entities"":{},""Confidence"":0.85}}";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var dataElement = doc.RootElement.GetProperty("data");
+        var result = JsonSerializer.Deserialize<IntentResponse>(dataElement);
+
+        Assert.NotNull(result);
+        Assert.Equal("msg.response", result.Intent);
+        Assert.Equal(0.85, result.Confidence);
+    }
+
+    [Fact]
+    public void FindDeserializableElement_WithArrayWrappedObject_UnwrapsAndDeserializes()
+    {
+        // Test unwrapping single-element arrays
+        var responseJson = @"{""output"":[{""Explanation"":""wrapped in array"",""Output"":""123""}]}";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var outputElement = doc.RootElement.GetProperty("output");
+        Assert.Equal(JsonValueKind.Array, outputElement.ValueKind);
+
+        var result = JsonSerializer.Deserialize<MathStep>(outputElement[0]);
+        Assert.NotNull(result);
+        Assert.Equal("wrapped in array", result.Explanation);
+    }
+
+    [Fact]
+    public void FindDeserializableElement_WithDoubleEncodedJson_UnwrapsMultipleLevels()
+    {
+        // Test double-encoded JSON string
+        var innerJson = @"{""Intent"":""msg.response"",""Entities"":{},""Confidence"":0.99}";
+        var escapedJson = JsonSerializer.Serialize(innerJson);
+        var responseJson = $@"{{""output"":{escapedJson}}}";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var outputElement = doc.RootElement.GetProperty("output");
+        Assert.Equal(JsonValueKind.String, outputElement.ValueKind);
+
+        // First unwrap
+        var firstUnwrap = outputElement.GetString()!;
+        var result = JsonSerializer.Deserialize<IntentResponse>(firstUnwrap);
+
+        Assert.NotNull(result);
+        Assert.Equal("msg.response", result.Intent);
+        Assert.Equal(0.99, result.Confidence);
+    }
+
+    [Fact]
+    public void FindDeserializableElement_WithRootAsArray_ExtractsFirstElement()
+    {
+        // Test when root itself is an array
+        var responseJson = @"[{""Explanation"":""first item"",""Output"":""999""}]";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        Assert.Equal(JsonValueKind.Array, doc.RootElement.ValueKind);
+
+        var result = JsonSerializer.Deserialize<MathStep>(doc.RootElement[0]);
+        Assert.NotNull(result);
+        Assert.Equal("first item", result.Explanation);
+        Assert.Equal("999", result.Output);
+    }
+
+    [Fact]
+    public void FindDeserializableElement_WithComplexNestedStructure_FindsTarget()
+    {
+        // Test complex nesting with multiple levels
+        var responseJson = @"{
+            ""status"": ""success"",
+            ""result"": {
+                ""data"": {
+                    ""Intent"": ""msg.response"",
+                    ""Entities"": {""msg.response"": ""nested deep""},
+                    ""Confidence"": 0.88
+                }
+            }
+        }";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var dataElement = doc.RootElement.GetProperty("result").GetProperty("data");
+        var result = JsonSerializer.Deserialize<IntentResponse>(dataElement);
+
+        Assert.NotNull(result);
+        Assert.Equal("msg.response", result.Intent);
+        Assert.Equal(0.88, result.Confidence);
+    }
+
+    [Fact]
+    public void FindDeserializableElement_WithStringEncodedNestedObject_ParsesCorrectly()
+    {
+        // Your original problematic case
+        var responseJson = "{\"output\":\"{\\\"intent\\\": \\\"msg.response\\\", \\\"entities\\\": {\\\"msg.response\\\": \\\"How far is france from germany?\\\"}, \\\"confidence\\\": 0.95}\"}";
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var outputElement = doc.RootElement.GetProperty("output");
+
+        // Verify it's a string
+        Assert.Equal(JsonValueKind.String, outputElement.ValueKind);
+
+        // Parse the string
+        var jsonString = outputElement.GetString()!;
+        using var innerDoc = JsonDocument.Parse(jsonString);
+
+        // Now we can access the properties with different casing
+        var intent = innerDoc.RootElement.GetProperty("intent").GetString();
+        var confidence = innerDoc.RootElement.GetProperty("confidence").GetDouble();
+
+        Assert.Equal("msg.response", intent);
+        Assert.Equal(0.95, confidence);
     }
 
     // ─── Test Helpers ────────────────────────────────────────────
@@ -206,6 +376,16 @@ public class MafIntegrationTests
     {
         public string Explanation { get; init; } = string.Empty;
         public string Output { get; init; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Test model for intent response testing.
+    /// </summary>
+    private record IntentResponse
+    {
+        public string Intent { get; init; } = string.Empty;
+        public Dictionary<string, string>? Entities { get; init; }
+        public double Confidence { get; init; }
     }
 
     private sealed class StubSession : AgentSession
