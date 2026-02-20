@@ -53,7 +53,7 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./TestResults/**/coverage.cobertura.xml
+        directory: ./TestResults
         fail_ci_if_error: false
 
     - name: Trigger documentation agent
