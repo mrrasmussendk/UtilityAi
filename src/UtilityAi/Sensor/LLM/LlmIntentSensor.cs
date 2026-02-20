@@ -218,8 +218,7 @@ public sealed record IntentAnalysis(
     /// </summary>
     public T? GetParameter<T>(string name, T? defaultValue = default)
     {
-        // Read from Entities only.
-        if (Entities?.TryGetValue(name, out var element) == true)
+        if (TryGetParameterElement(name, out var element))
         {
             try
             {
@@ -232,6 +231,20 @@ public sealed record IntentAnalysis(
         }
 
         return defaultValue;
+    }
+
+    private bool TryGetParameterElement(string name, out JsonElement element)
+    {
+        if (Entities?.TryGetValue(name, out element) == true)
+            return true;
+
+        #pragma warning disable CS0618 // Type or member is obsolete
+        if (Parameters?.TryGetValue(name, out element) == true)
+            return true;
+        #pragma warning restore CS0618
+
+        element = default;
+        return false;
     }
 
     /// <summary>
