@@ -22,4 +22,9 @@ public sealed class MockLlmClient : ILlmClient
         LastPrompt = prompt;
         return Task.FromResult(_response);
     }
+
+    public Task<T> GenerateStructuredAsync<T>(string instructions, string userPrompt, CancellationToken ct = default)
+    {
+        throw new NotImplementedException();
+    }
 }

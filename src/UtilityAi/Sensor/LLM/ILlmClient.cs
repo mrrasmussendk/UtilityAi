@@ -10,4 +10,6 @@ public interface ILlmClient
     /// Generates a text response from a prompt.
     /// </summary>
     Task<string> GenerateAsync(string prompt, CancellationToken ct = default);
+    Task<T> GenerateStructuredAsync<T>(string instructions, string userPrompt, CancellationToken ct = default);
+
 }

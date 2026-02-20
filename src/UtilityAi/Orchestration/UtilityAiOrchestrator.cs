@@ -103,7 +103,6 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
-
         for (int tick = 0; tick < maxTicks; tick++)
         {
             var result = await RunTickAsync(tick, ct, sink);
@@ -128,6 +127,8 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         if (TryHandleCancellation(_bus, tick, sink, ct)) return null;
 
         var rt = new Runtime(_bus, tick);
+        
+        CreateCapAbilitySnapShot(rt);
         sink.OnTickStart(rt);
 
         await SenseAsyncAll(rt, ct);
@@ -155,6 +156,12 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         var cancelledRtEarly = new Runtime(bus, tick);
         sink.OnStopped(cancelledRtEarly, OrchestrationStopReason.Cancelled);
         return true;
+    }
+
+    private void CreateCapAbilitySnapShot(Runtime rt)
+    {
+        var snapShot = this.GetCapabilitiesInfo(rt);
+        rt.Bus.Publish(snapShot);
     }
 
     private async Task SenseAsyncAll(Runtime rt, CancellationToken ct)
@@ -264,7 +271,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
             return new CapabilityInfo(moduleName, moduleTypeName, proposals);
         }).ToList();
     }
-    
+
     /// <summary>
     /// Introspects all registered capability modules and returns metadata about their potential actions.
     /// Useful for planning, LLM context building, and debugging.
@@ -293,5 +300,4 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
             return new CapabilityInfo(moduleName, moduleTypeName, proposals);
         }).ToList();
     }
-
 }
