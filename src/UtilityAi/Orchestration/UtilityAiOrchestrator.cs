@@ -3,6 +3,7 @@ using UtilityAi.Sensor;
 using UtilityAi.Utils;
 using UtilityAi.Consideration;
 using UtilityAi.Orchestration.Events;
+using UtilityAi.Sensor.LLM;
 
 namespace UtilityAi.Orchestration;
 
@@ -159,8 +160,9 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
 
     private void CreateCapAbilitySnapShot(Runtime rt)
     {
-        var snapShot = this.GetCapabilitiesInfo();
-        rt.Bus.Publish(snapShot);
+        var capabilities = this.GetCapabilitiesInfo();
+        rt.Bus.Publish(capabilities);
+        rt.Bus.Publish(new CapabilitiesSnapshot(capabilities));
     }
 
     private async Task SenseAsyncAll(Runtime rt, CancellationToken ct)

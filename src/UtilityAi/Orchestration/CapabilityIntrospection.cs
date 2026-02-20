@@ -27,3 +27,9 @@ public sealed record ProposalInfo(
     IntentMatchSpec? IntentMatch = null,
     IReadOnlyList<IntentParameterUsage>? IntentParameters = null
 );
+
+/// <summary>
+/// Fact containing a snapshot of available capabilities.
+/// Published by the orchestrator and optionally used by LlmIntentSensor for context.
+/// </summary>
+public sealed record CapabilitiesSnapshot(IReadOnlyList<CapabilityInfo> Capabilities);

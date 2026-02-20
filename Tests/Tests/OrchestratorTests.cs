@@ -50,4 +50,30 @@ public class OrchestratorTests
 
         Assert.Equal("A", bus.GetOrDefault<string>());
     }
+
+    [Fact]
+    public async Task Orchestrator_PublishesCapabilitiesSnapshot()
+    {
+        var bus = new EventBus();
+        var orch = new UtilityAiOrchestrator(null, true, bus);
+        orch.AddSensor(new NoopSensor());
+        orch.AddModule(new PublishFactModule<string>("TestValue", id: "TestModule", baseScore: 0.9));
+
+        await orch.RunAsync(1, CancellationToken.None);
+
+        // Verify IReadOnlyList<CapabilityInfo> is published
+        var capabilities = bus.GetOrDefault<IReadOnlyList<CapabilityInfo>>();
+        Assert.NotNull(capabilities);
+        Assert.Single(capabilities);
+        Assert.Equal("PublishFactModule`1", capabilities[0].ModuleName);
+        Assert.Single(capabilities[0].PotentialActions);
+        Assert.Equal("TestModule", capabilities[0].PotentialActions[0].ProposalId);
+
+        // Verify CapabilitiesSnapshot wrapper is also published
+        var snapshot = bus.GetOrDefault<CapabilitiesSnapshot>();
+        Assert.NotNull(snapshot);
+        Assert.Single(snapshot.Capabilities);
+        Assert.Equal("PublishFactModule`1", snapshot.Capabilities[0].ModuleName);
+        Assert.Equal("TestModule", snapshot.Capabilities[0].PotentialActions[0].ProposalId);
+    }
 }

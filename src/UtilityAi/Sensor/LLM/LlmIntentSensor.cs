@@ -271,8 +271,3 @@ public sealed record IntentAnalysis(
     }
 };
 
-/// <summary>
-/// Fact containing a snapshot of available capabilities.
-/// Optionally used by LlmIntentSensor for context.
-/// </summary>
-public sealed record CapabilitiesSnapshot(IReadOnlyList<CapabilityInfo> Capabilities);
