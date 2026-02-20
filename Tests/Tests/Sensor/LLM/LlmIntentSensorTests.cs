@@ -77,7 +77,7 @@ public sealed class LlmIntentSensorTests
         // Arrange
         var bus = new EventBus();
         bus.Publish(new UserMessage("Test"));
-        bus.Publish(new IntentAnalysis("existing", new Dictionary<string, object>(), 1.0));
+        bus.Publish(new IntentAnalysis("existing", new Dictionary<string, System.Text.Json.JsonElement>(), 1.0));
 
         var mockLlm = new MockLlmClient("{}");
         var sensor = LlmIntentSensor.ForMessageType<UserMessage>(mockLlm, msg => msg.Text);

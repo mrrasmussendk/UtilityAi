@@ -149,16 +149,17 @@ public sealed class LlmIntentSensor : ISensor
 
             return new IntentAnalysis(
                 parsed.Intent ?? "unknown",
-                parsed.Entities ?? new Dictionary<string, object>(),
+                parsed.Entities ?? new Dictionary<string, JsonElement>(),
                 parsed.Confidence
             );
         }
         catch (Exception ex)
         {
             // Fallback: Return low-confidence unknown intent
+            using var errorDoc = JsonDocument.Parse($"\"{ex.Message}\"");
             return new IntentAnalysis(
                 "parse_error",
-                new Dictionary<string, object> { ["error"] = ex.Message },
+                new Dictionary<string, JsonElement> { ["error"] = errorDoc.RootElement.Clone() },
                 0.0
             );
         }
@@ -195,7 +196,7 @@ public sealed class LlmIntentSensor : ISensor
 
     private sealed record IntentAnalysisJson(
         string? Intent,
-        Dictionary<string, object>? Entities,
+        Dictionary<string, JsonElement>? Entities,
         double Confidence
     );
 }
@@ -206,19 +207,48 @@ public sealed class LlmIntentSensor : ISensor
 /// </summary>
 public sealed record IntentAnalysis(
     [property: JsonPropertyName("intent")] string Intent,
-    [property: JsonPropertyName("entities")] Dictionary<string, object> Entities,
+    [property: JsonPropertyName("entities")] Dictionary<string, JsonElement> Entities,
     [property: JsonPropertyName("confidence")] double Confidence,
-    [property: JsonPropertyName("parameters")] Dictionary<string, object>? Parameters = null
+    [property: JsonPropertyName("parameters")] Dictionary<string, JsonElement>? Parameters = null
 )
 {
     /// <summary>
     /// Gets a typed parameter value from the Parameters dictionary.
-    /// Returns defaultValue if the parameter is missing or cannot be cast to T.
+    /// Returns defaultValue if the parameter is missing or cannot be deserialized to T.
     /// </summary>
     public T? GetParameter<T>(string name, T? defaultValue = default)
     {
-        if (Parameters?.TryGetValue(name, out var value) == true && value is T typed)
-            return typed;
+        if (Parameters?.TryGetValue(name, out var element) == true)
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<T>(element);
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// Gets a typed entity value from the Entities dictionary.
+    /// Returns defaultValue if the entity is missing or cannot be deserialized to T.
+    /// </summary>
+    public T? GetEntity<T>(string name, T? defaultValue = default)
+    {
+        if (Entities.TryGetValue(name, out var element))
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<T>(element);
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
         return defaultValue;
     }
 

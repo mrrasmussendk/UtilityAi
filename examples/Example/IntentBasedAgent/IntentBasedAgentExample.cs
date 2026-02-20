@@ -24,22 +24,29 @@ public static class IntentBasedAgentExample
         var bus = new EventBus();
 
         // Simulate what an LLM would produce
+        using var entitiesDoc = System.Text.Json.JsonDocument.Parse("""
+            {
+                "issue_type": "service_outage",
+                "affected_service": "payment_api",
+                "customer_email": "enterprise@company.com"
+            }
+            """);
+        using var paramsDoc = System.Text.Json.JsonDocument.Parse("""
+            {
+                "urgency": 0.95,
+                "customer_tier": "enterprise",
+                "complexity": 0.8,
+                "requires_human": false
+            }
+            """);
+
         var intentAnalysis = new IntentAnalysis(
             Intent: "ticket.create",
-            Entities: new Dictionary<string, object>
-            {
-                ["issue_type"] = "service_outage",
-                ["affected_service"] = "payment_api",
-                ["customer_email"] = "enterprise@company.com"
-            },
+            Entities: entitiesDoc.RootElement.EnumerateObject()
+                .ToDictionary(p => p.Name, p => p.Value.Clone()),
             Confidence: 0.96,
-            Parameters: new Dictionary<string, object>
-            {
-                ["urgency"] = 0.95,              // Critical issue
-                ["customer_tier"] = "enterprise", // Premium customer
-                ["complexity"] = 0.8,             // Complex problem
-                ["requires_human"] = false        // Can be automated
-            }
+            Parameters: paramsDoc.RootElement.EnumerateObject()
+                .ToDictionary(p => p.Name, p => p.Value.Clone())
         );
 
         bus.Publish(intentAnalysis);

@@ -14,15 +14,19 @@ public class IntentParametersTests
     public void IntentAnalysis_GetParameter_ReturnsTypedValue()
     {
         // Arrange
-        var parameters = new Dictionary<string, object>
+        using var urgencyDoc = System.Text.Json.JsonDocument.Parse("0.85");
+        using var tierDoc = System.Text.Json.JsonDocument.Parse("\"premium\"");
+        using var humanDoc = System.Text.Json.JsonDocument.Parse("true");
+
+        var parameters = new Dictionary<string, System.Text.Json.JsonElement>
         {
-            ["urgency"] = 0.85,
-            ["customer_tier"] = "premium",
-            ["requires_human"] = true
+            ["urgency"] = urgencyDoc.RootElement.Clone(),
+            ["customer_tier"] = tierDoc.RootElement.Clone(),
+            ["requires_human"] = humanDoc.RootElement.Clone()
         };
         var intent = new IntentAnalysis(
             Intent: "ticket.create",
-            Entities: new Dictionary<string, object>(),
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
             Confidence: 0.95,
             Parameters: parameters
         );
@@ -39,7 +43,7 @@ public class IntentParametersTests
         // Arrange
         var intent = new IntentAnalysis(
             Intent: "test",
-            Entities: new Dictionary<string, object>(),
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
             Confidence: 0.9
         );
 
@@ -52,10 +56,14 @@ public class IntentParametersTests
     public void IntentAnalysis_ParameterAbove_WorksCorrectly()
     {
         // Arrange
-        var parameters = new Dictionary<string, object> { ["urgency"] = 0.85 };
+        using var urgencyDoc = System.Text.Json.JsonDocument.Parse("0.85");
+        var parameters = new Dictionary<string, System.Text.Json.JsonElement>
+        {
+            ["urgency"] = urgencyDoc.RootElement.Clone()
+        };
         var intent = new IntentAnalysis(
             Intent: "test",
-            Entities: new Dictionary<string, object>(),
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
             Confidence: 0.9,
             Parameters: parameters
         );
@@ -148,12 +156,16 @@ public class IntentParametersTests
     public async Task Proposal_WithIntentParameter_ScoresCorrectly()
     {
         // Arrange
+        using var urgencyDoc = System.Text.Json.JsonDocument.Parse("0.8");
         var bus = new EventBus();
         bus.Publish(new IntentAnalysis(
             Intent: "ticket.create",
-            Entities: new Dictionary<string, object>(),
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
             Confidence: 0.9,
-            Parameters: new Dictionary<string, object> { ["urgency"] = 0.8 }
+            Parameters: new Dictionary<string, System.Text.Json.JsonElement>
+            {
+                ["urgency"] = urgencyDoc.RootElement.Clone()
+            }
         ));
 
         var proposal = ProposalHelper.For("test")
@@ -199,15 +211,18 @@ public class IntentParametersTests
     public async Task IntentBasedOrchestration_ChoosesCorrectProposal()
     {
         // Arrange
+        using var urgencyDoc = System.Text.Json.JsonDocument.Parse("0.9");
+        using var tierDoc = System.Text.Json.JsonDocument.Parse("\"premium\"");
+
         var bus = new EventBus();
         bus.Publish(new IntentAnalysis(
             Intent: "ticket.create",
-            Entities: new Dictionary<string, object>(),
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
             Confidence: 0.95,
-            Parameters: new Dictionary<string, object>
+            Parameters: new Dictionary<string, System.Text.Json.JsonElement>
             {
-                ["urgency"] = 0.9,
-                ["customer_tier"] = "premium"
+                ["urgency"] = urgencyDoc.RootElement.Clone(),
+                ["customer_tier"] = tierDoc.RootElement.Clone()
             }
         ));
 
@@ -228,14 +243,16 @@ public class IntentParametersTests
     public async Task IntentBasedOrchestration_LowUrgency_ChoosesQueryProposal()
     {
         // Arrange
+        using var hasTicketDoc = System.Text.Json.JsonDocument.Parse("true");
+
         var bus = new EventBus();
         bus.Publish(new IntentAnalysis(
             Intent: "ticket.query",
-            Entities: new Dictionary<string, object>(),
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
             Confidence: 0.95,
-            Parameters: new Dictionary<string, object>
+            Parameters: new Dictionary<string, System.Text.Json.JsonElement>
             {
-                ["has_ticket_id"] = true
+                ["has_ticket_id"] = hasTicketDoc.RootElement.Clone()
             }
         ));
 
