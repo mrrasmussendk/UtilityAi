@@ -88,6 +88,10 @@ public static class JsonSchemaGenerator
         var isNullableValue = underlyingNullable is not null;
         var effective = underlyingNullable ?? t;
 
+        // Handle JsonElement as generic object type
+        if (effective == typeof(System.Text.Json.JsonElement))
+            return (new JsonObject {["type"] = "object", ["properties"] = new JsonObject(), ["required"] = new JsonArray(), ["additionalProperties"] = false}, !isNullableValue);
+
         // ✅ Handle scalar primitives FIRST (string before IEnumerable)
         if (effective == typeof(string))
             return (new JsonObject {["type"] = "string"}, !isNullableValue);
