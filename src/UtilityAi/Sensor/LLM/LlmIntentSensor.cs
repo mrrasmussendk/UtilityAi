@@ -209,16 +209,17 @@ public sealed record IntentAnalysis(
     [property: JsonPropertyName("intent")] string Intent,
     [property: JsonPropertyName("entities")] Dictionary<string, JsonElement>? Entities,
     [property: JsonPropertyName("confidence")] double Confidence,
-    [property: JsonPropertyName("parameters")] Dictionary<string, JsonElement>? Parameters = null
+    [property: JsonPropertyName("parameters"), Obsolete("Use Entities instead. Parameters property will be removed in a future version.")] Dictionary<string, JsonElement>? Parameters = null
 )
 {
     /// <summary>
-    /// Gets a typed parameter value from the Parameters dictionary.
+    /// Gets a typed parameter value from the Entities dictionary.
     /// Returns defaultValue if the parameter is missing or cannot be deserialized to T.
     /// </summary>
     public T? GetParameter<T>(string name, T? defaultValue = default)
     {
-        if (Parameters?.TryGetValue(name, out var element) == true)
+        // Check Entities first (new approach), then fall back to Parameters (deprecated)
+        if (Entities?.TryGetValue(name, out var element) == true)
         {
             try
             {
@@ -229,6 +230,22 @@ public sealed record IntentAnalysis(
                 return defaultValue;
             }
         }
+        
+        // Fallback for backward compatibility
+        #pragma warning disable CS0618 // Type or member is obsolete
+        if (Parameters?.TryGetValue(name, out var paramElement) == true)
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<T>(paramElement);
+            }
+            catch
+            {
+                return defaultValue;
+            }
+        }
+        #pragma warning restore CS0618
+        
         return defaultValue;
     }
 
@@ -254,6 +271,7 @@ public sealed record IntentAnalysis(
 
     /// <summary>
     /// Checks if a numeric parameter is above a threshold.
+    /// Reads from Entities dictionary.
     /// Returns false if parameter is missing or not numeric.
     /// </summary>
     public bool ParameterAbove(string name, double threshold)
@@ -263,6 +281,7 @@ public sealed record IntentAnalysis(
 
     /// <summary>
     /// Checks if a numeric parameter is below a threshold.
+    /// Reads from Entities dictionary.
     /// Returns false if parameter is missing or not numeric.
     /// </summary>
     public bool ParameterBelow(string name, double threshold)

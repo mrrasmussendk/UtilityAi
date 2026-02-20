@@ -18,7 +18,7 @@ public class IntentParametersTests
         using var tierDoc = System.Text.Json.JsonDocument.Parse("\"premium\"");
         using var humanDoc = System.Text.Json.JsonDocument.Parse("true");
 
-        var parameters = new Dictionary<string, System.Text.Json.JsonElement>
+        var entities = new Dictionary<string, System.Text.Json.JsonElement>
         {
             ["urgency"] = urgencyDoc.RootElement.Clone(),
             ["customer_tier"] = tierDoc.RootElement.Clone(),
@@ -26,9 +26,8 @@ public class IntentParametersTests
         };
         var intent = new IntentAnalysis(
             Intent: "ticket.create",
-            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
-            Confidence: 0.95,
-            Parameters: parameters
+            Entities: entities,
+            Confidence: 0.95
         );
 
         // Act & Assert
@@ -57,15 +56,14 @@ public class IntentParametersTests
     {
         // Arrange
         using var urgencyDoc = System.Text.Json.JsonDocument.Parse("0.85");
-        var parameters = new Dictionary<string, System.Text.Json.JsonElement>
+        var entities = new Dictionary<string, System.Text.Json.JsonElement>
         {
             ["urgency"] = urgencyDoc.RootElement.Clone()
         };
         var intent = new IntentAnalysis(
             Intent: "test",
-            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
-            Confidence: 0.9,
-            Parameters: parameters
+            Entities: entities,
+            Confidence: 0.9
         );
 
         // Act & Assert
@@ -160,12 +158,11 @@ public class IntentParametersTests
         var bus = new EventBus();
         bus.Publish(new IntentAnalysis(
             Intent: "ticket.create",
-            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
-            Confidence: 0.9,
-            Parameters: new Dictionary<string, System.Text.Json.JsonElement>
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>
             {
                 ["urgency"] = urgencyDoc.RootElement.Clone()
-            }
+            },
+            Confidence: 0.9
         ));
 
         var proposal = ProposalHelper.For("test")
@@ -217,13 +214,12 @@ public class IntentParametersTests
         var bus = new EventBus();
         bus.Publish(new IntentAnalysis(
             Intent: "ticket.create",
-            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
-            Confidence: 0.95,
-            Parameters: new Dictionary<string, System.Text.Json.JsonElement>
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>
             {
                 ["urgency"] = urgencyDoc.RootElement.Clone(),
                 ["customer_tier"] = tierDoc.RootElement.Clone()
-            }
+            },
+            Confidence: 0.95
         ));
 
         var orchestrator = new UtilityAiOrchestrator(bus: bus)
@@ -248,12 +244,11 @@ public class IntentParametersTests
         var bus = new EventBus();
         bus.Publish(new IntentAnalysis(
             Intent: "ticket.query",
-            Entities: new Dictionary<string, System.Text.Json.JsonElement>(),
-            Confidence: 0.95,
-            Parameters: new Dictionary<string, System.Text.Json.JsonElement>
+            Entities: new Dictionary<string, System.Text.Json.JsonElement>
             {
                 ["has_ticket_id"] = hasTicketDoc.RootElement.Clone()
-            }
+            },
+            Confidence: 0.95
         ));
 
         var orchestrator = new UtilityAiOrchestrator(bus: bus)
