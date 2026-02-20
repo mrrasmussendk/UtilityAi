@@ -170,11 +170,19 @@ public sealed class ProposalBuilder
         if (_action == null)
             throw new InvalidOperationException("Action must be set before building proposal");
 
+        // Automatically add eligibility check for intent parameters
+        var eligibilities = new List<IEligibility>(_eligibilities);
+        if (_intentParameters.Count > 0)
+        {
+            var requiredParams = _intentParameters.Select(p => p.ParameterName).ToList();
+            eligibilities.Add(new HasIntentParametersEligible(requiredParams));
+        }
+
         return new Proposal(
             id: _id,
             cons: _considerations,
             act: _action,
-            eligibilities: _eligibilities.Count > 0 ? _eligibilities : null
+            eligibilities: eligibilities.Count > 0 ? eligibilities : null
         )
         {
             Prior = _prior,

@@ -55,3 +55,28 @@ public sealed record RateLimitStatus(
 /// Indicates orchestration should stop.
 /// </summary>
 public sealed record StopSignal(string Reason);
+
+/// <summary>
+/// Record of a single executed action.
+/// </summary>
+public sealed record ExecutedAction(
+    string ProposalId,
+    string? Description,
+    int TickNumber,
+    DateTimeOffset Timestamp);
+
+/// <summary>
+/// Stack of all actions executed during the orchestration session.
+/// Published and updated after each action execution.
+/// </summary>
+public sealed record ExecutionHistory(IReadOnlyList<ExecutedAction> Actions)
+{
+    /// <summary>
+    /// Adds a new executed action to the history.
+    /// </summary>
+    public ExecutionHistory WithAction(ExecutedAction action)
+    {
+        var newActions = Actions.Append(action).ToList();
+        return this with { Actions = newActions };
+    }
+}

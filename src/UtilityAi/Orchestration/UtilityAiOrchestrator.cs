@@ -1,4 +1,5 @@
 ﻿using UtilityAi.Capabilities;
+using UtilityAi.Facts;
 using UtilityAi.Sensor;
 using UtilityAi.Utils;
 using UtilityAi.Consideration;
@@ -146,6 +147,21 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
 
         _executionStack.Push(choice.Value.chosen.Id);
         _bus.Publish<IReadOnlyList<string>>(_executionStack.ToList());
+
+        // Update execution history
+        var existingHistory = _bus.GetOrDefault<ExecutionHistory>();
+        var executedAction = new ExecutedAction(
+            ProposalId: choice.Value.chosen.Id,
+            Description: choice.Value.chosen.Description,
+            TickNumber: tick,
+            Timestamp: DateTimeOffset.UtcNow
+        );
+
+        var newHistory = existingHistory == null
+            ? new ExecutionHistory(new[] { executedAction })
+            : existingHistory.WithAction(executedAction);
+
+        _bus.Publish(newHistory);
 
         return new OrchestrationTick(tick, scored, choice.Value.chosen, choice.Value.utility);
     }

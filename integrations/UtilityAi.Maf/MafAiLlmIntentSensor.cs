@@ -1,5 +1,6 @@
 using System.Text;
 using OpenAI.Chat;
+using UtilityAi.Facts;
 using UtilityAi.Helpers.OpenAiStructuredOutputHelper;
 using UtilityAi.Helpers.OpenAiStructuredOutputHelper.SchemaGenerator;
 using UtilityAi.Helpers.OpenAiStructuredOutputHelper.Strategy;
@@ -110,6 +111,23 @@ public sealed class MafAiLlmIntentSensor : ISensor
         sb.AppendLine();
         sb.AppendLine("Analyze the user's message and extract structured information.");
         sb.AppendLine();
+
+        // Include execution history to show what actions have already been taken
+        var executionHistory = rt.Bus.GetOrDefault<ExecutionHistory>();
+        if (executionHistory != null && executionHistory.Actions.Count > 0)
+        {
+            sb.AppendLine("## Actions Already Executed");
+            foreach (var action in executionHistory.Actions)
+            {
+                sb.AppendLine($"- Tick {action.TickNumber}: {action.ProposalId}");
+                if (!string.IsNullOrWhiteSpace(action.Description))
+                {
+                    sb.AppendLine($"  Description: {action.Description}");
+                }
+            }
+            sb.AppendLine();
+        }
+
         sb.AppendLine("## User Message");
         sb.AppendLine(messageText);
         sb.AppendLine();
@@ -147,10 +165,11 @@ public sealed class MafAiLlmIntentSensor : ISensor
         }
 
         sb.AppendLine("## Instructions");
-        sb.AppendLine("1. Identify the user's primary intent");
-        sb.AppendLine("2. Extract entities that match the parameters required by relevant system actions");
-        sb.AppendLine("3. Use entity keys that correspond to action parameters (not generic keys like 'country', 'unit')");
-        sb.AppendLine("4. If no system action matches, extract general semantic entities");
+        sb.AppendLine("1. Review the execution history - if an action was already executed that fulfills the user's request, DO NOT extract entities for that action again");
+        sb.AppendLine("2. Identify the user's current intent based on their message and what has NOT yet been done");
+        sb.AppendLine("3. Extract entities that match the parameters required by relevant system actions that have NOT been executed");
+        sb.AppendLine("4. Use entity keys that correspond to action parameters (not generic keys like 'country', 'unit')");
+        sb.AppendLine("5. If the user's request is already fulfilled, set intent to 'none' or leave entities empty");
         sb.AppendLine();
         sb.AppendLine("## Output Format");
         sb.AppendLine("Respond with JSON containing:");
