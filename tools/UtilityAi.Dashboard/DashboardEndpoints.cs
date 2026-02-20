@@ -34,7 +34,7 @@ public static class DashboardEndpoints
     /// var app = builder.Build();
     /// app.MapUtilityAiDashboard(state);
     ///
-    /// await orchestrator.RunAsync(intent, 10, ct, sink: sink);
+    /// await orchestrator.RunAsync(maxTicks: 10, ct, sink: sink);
     /// </code>
     /// </example>
     public static IEndpointRouteBuilder MapUtilityAiDashboard(

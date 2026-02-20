@@ -9,7 +9,7 @@ namespace UtilityAi.Capabilities;
 /// </summary>
 /// <remarks>
 /// Capability modules are the core decision-making components in the orchestration system.
-/// Each module examines the current Runtime (EventBus facts, user intent, tick number) and
+/// Each module examines the current Runtime (EventBus facts and tick number) and
 /// returns zero or more Proposals that represent potential actions the system could take.
 /// Modules should be stateless and focus on a specific domain or capability area.
 /// Examples: SearchModule, SummarizationModule, OutputModule, ValidationModule.

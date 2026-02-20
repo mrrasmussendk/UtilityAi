@@ -75,11 +75,10 @@ agentBus.TryGetWithFallback<GlobalConfig>(out var config); // Falls back to pare
 An immutable context passed to sensors, modules, and considerations:
 
 ```csharp
-public sealed record Runtime(EventBus Bus, UserIntent Intent, int Tick);
+public sealed record Runtime(EventBus Bus, int Tick);
 ```
 
 - **Bus**: Access to the current EventBus state
-- **Intent**: The user's goal and parameters for this orchestration session
 - **Tick**: Current tick number (starts at 0)
 
 ---

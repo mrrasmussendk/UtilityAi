@@ -13,7 +13,7 @@ namespace UtilityAi.Dashboard;
 /// <code>
 /// var state = new DashboardState();
 /// var sink = new DashboardSink(state);
-/// await orchestrator.RunAsync(intent, maxTicks: 10, ct, sink: sink);
+/// await orchestrator.RunAsync(maxTicks: 10, ct, sink: sink);
 /// </code>
 /// </remarks>
 public sealed class DashboardSink : IOrchestrationSink
