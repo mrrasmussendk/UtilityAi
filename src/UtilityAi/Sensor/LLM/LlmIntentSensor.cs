@@ -206,9 +206,9 @@ public sealed class LlmIntentSensor : ISensor
 /// </summary>
 public sealed record IntentAnalysis(
     [property: JsonPropertyName("intent")] string Intent,
-    [property: JsonPropertyName("entities")] IReadOnlyDictionary<string, object> Entities,
+    [property: JsonPropertyName("entities")] Dictionary<string, object> Entities,
     [property: JsonPropertyName("confidence")] double Confidence,
-    [property: JsonPropertyName("parameters")] IReadOnlyDictionary<string, object>? Parameters = null
+    [property: JsonPropertyName("parameters")] Dictionary<string, object>? Parameters = null
 )
 {
     /// <summary>
