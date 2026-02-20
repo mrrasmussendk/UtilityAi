@@ -7,7 +7,7 @@ namespace UtilityAi.Consideration.General;
 /// Returns 1.0 if within range, 0.0 otherwise.
 /// </summary>
 /// <typeparam name="T">The type of fact containing the numeric value.</typeparam>
-public sealed class RangeValue<T> : IConsideration where T : class
+public sealed class RangeValue<T> : IConsideration where T : notnull
 {
     private readonly Func<T, double> _selector;
     private readonly double _min;

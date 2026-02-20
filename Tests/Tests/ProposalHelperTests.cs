@@ -30,7 +30,15 @@ public class ProposalHelperTests
     public void ProposalBuilder_Build_WithoutAction_ThrowsException()
     {
         var builder = ProposalHelper.For("test");
-        Assert.Throws<InvalidOperationException>(() => builder.Build());
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.Build());
+        Assert.Contains("missing required field 'action'", ex.Message);
+        Assert.Contains("test", ex.Message);
+    }
+
+    [Fact]
+    public void ProposalHelper_For_EmptyId_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => ProposalHelper.For(" "));
     }
 
     [Fact]

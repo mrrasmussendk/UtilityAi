@@ -8,7 +8,7 @@ namespace UtilityAi.Consideration.General;
 /// Weight of 1.0 = fully deterministic, 0.0 = fully random, 0.5 = balanced.
 /// </summary>
 /// <typeparam name="T">The type of fact containing the base score.</typeparam>
-public sealed class WeightedRandomValue<T> : IConsideration where T : class
+public sealed class WeightedRandomValue<T> : IConsideration where T : notnull
 {
     private readonly Func<T, double> _scoreSelector;
     private readonly double _deterministicWeight;

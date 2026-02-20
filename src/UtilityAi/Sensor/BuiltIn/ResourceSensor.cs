@@ -29,8 +29,9 @@ public sealed class ResourceSensor : ISensor
         // Calculate CPU usage percentage
         var cpuUsedMs = (currentTotalProcessorTime - _lastTotalProcessorTime).TotalMilliseconds;
         var totalMsPassed = (now - _lastCheck).TotalMilliseconds;
-        var cpuPercent = totalMsPassed > 0
-            ? (cpuUsedMs / (Environment.ProcessorCount * totalMsPassed)) * 100.0
+        var processorCount = Environment.ProcessorCount;
+        var cpuPercent = totalMsPassed > 0 && processorCount > 0
+            ? (cpuUsedMs / (processorCount * totalMsPassed)) * 100.0
             : 0.0;
 
         // Get memory usage in MB
