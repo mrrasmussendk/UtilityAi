@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using UtilityAi.Orchestration;
 using UtilityAi.Utils;
 
@@ -204,10 +205,10 @@ public sealed class LlmIntentSensor : ISensor
 /// Published to EventBus for modules to react to.
 /// </summary>
 public sealed record IntentAnalysis(
-    string Intent,
-    IReadOnlyDictionary<string, object> Entities,
-    double Confidence,
-    IReadOnlyDictionary<string, object>? Parameters = null
+    [property: JsonPropertyName("intent")] string Intent,
+    [property: JsonPropertyName("entities")] IReadOnlyDictionary<string, object> Entities,
+    [property: JsonPropertyName("confidence")] double Confidence,
+    [property: JsonPropertyName("parameters")] IReadOnlyDictionary<string, object>? Parameters = null
 )
 {
     /// <summary>
