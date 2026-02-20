@@ -157,7 +157,12 @@ public static class MafRequestExtensions
     /// </summary>
     private static System.Text.Json.JsonElement FindDeserializableElement<T>(System.Text.Json.JsonElement root, string propertyName)
     {
-        // Strategy 1: Try the specified property name
+        // Strategy 1: Try root element directly (unwrapped)
+        var unwrappedRoot = TryUnwrapElement(root);
+        if (CanDeserialize<T>(unwrappedRoot))
+            return unwrappedRoot;
+
+        // Strategy 2: Try the specified property name
         if (root.TryGetProperty(propertyName, out var namedElement))
         {
             var result = TryUnwrapElement(namedElement);
@@ -165,7 +170,7 @@ public static class MafRequestExtensions
                 return result;
         }
 
-        // Strategy 2: If root is an array, try first element
+        // Strategy 3: If root is an array, try first element
         if (root.ValueKind == System.Text.Json.JsonValueKind.Array && root.GetArrayLength() > 0)
         {
             var result = TryUnwrapElement(root[0]);
@@ -173,7 +178,7 @@ public static class MafRequestExtensions
                 return result;
         }
 
-        // Strategy 3: Search all properties for a deserializable match
+        // Strategy 4: Search all properties for a deserializable match
         if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
         {
             foreach (var property in root.EnumerateObject())
@@ -183,11 +188,6 @@ public static class MafRequestExtensions
                     return result;
             }
         }
-
-        // Strategy 4: Try root itself (unwrapped)
-        var unwrappedRoot = TryUnwrapElement(root);
-        if (CanDeserialize<T>(unwrappedRoot))
-            return unwrappedRoot;
 
         // Fallback: return root as-is
         return root;
