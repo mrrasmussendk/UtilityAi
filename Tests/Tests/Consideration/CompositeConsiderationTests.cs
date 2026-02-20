@@ -12,7 +12,7 @@ public class CompositeConsiderationTests
     public void AndConsideration_AllHigh_ReturnsHigh()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus,  0);
 
         var consideration = new AndConsideration(
             new ConstantValue(0.8),
@@ -28,7 +28,7 @@ public class CompositeConsiderationTests
     public void AndConsideration_OneLow_ReturnsLow()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
 
         var consideration = new AndConsideration(
             new ConstantValue(1.0),
@@ -44,7 +44,7 @@ public class CompositeConsiderationTests
     public void OrConsideration_AnyHigh_ReturnsHigh()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
 
         var consideration = new OrConsideration(
             new ConstantValue(0.1),
@@ -60,7 +60,7 @@ public class CompositeConsiderationTests
     public void NotConsideration_InvertsValue()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
 
         var consideration = new NotConsideration(new ConstantValue(0.3));
         var result = consideration.Evaluate(rt);

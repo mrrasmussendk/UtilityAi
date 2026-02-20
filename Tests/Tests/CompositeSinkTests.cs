@@ -34,7 +34,7 @@ public class CompositeSinkTests
         var sink2 = new TestSink();
         var composite = new CompositeSink(sink1, sink2);
         var bus = new EventBus();
-        var runtime = new Runtime(bus, new UserIntent("test"), 0);
+        var runtime = new Runtime(bus,  0);
 
         composite.OnTickStart(runtime);
 
@@ -49,7 +49,7 @@ public class CompositeSinkTests
         var sink2 = new TestSink();
         var composite = new CompositeSink(sink1, sink2);
         var bus = new EventBus();
-        var runtime = new Runtime(bus, new UserIntent("test"), 0);
+        var runtime = new Runtime(bus,  0);
         var scored = new List<(Proposal, double)>();
 
         composite.OnScored(runtime, scored);
@@ -65,7 +65,7 @@ public class CompositeSinkTests
         var sink2 = new TestSink();
         var composite = new CompositeSink(sink1, sink2);
         var bus = new EventBus();
-        var runtime = new Runtime(bus, new UserIntent("test"), 0);
+        var runtime = new Runtime(bus,  0);
         var proposal = new Proposal("test", Array.Empty<IConsideration>(), _ => Task.CompletedTask);
 
         composite.OnChosen(runtime, proposal, 0.5);
@@ -81,7 +81,7 @@ public class CompositeSinkTests
         var sink2 = new TestSink();
         var composite = new CompositeSink(sink1, sink2);
         var bus = new EventBus();
-        var runtime = new Runtime(bus, new UserIntent("test"), 0);
+        var runtime = new Runtime(bus,  0);
         var proposal = new Proposal("test", Array.Empty<IConsideration>(), _ => Task.CompletedTask);
 
         composite.OnActed(runtime, proposal);
@@ -97,7 +97,7 @@ public class CompositeSinkTests
         var sink2 = new TestSink();
         var composite = new CompositeSink(sink1, sink2);
         var bus = new EventBus();
-        var runtime = new Runtime(bus, new UserIntent("test"), 0);
+        var runtime = new Runtime(bus,  0);
 
         composite.OnStopped(runtime, OrchestrationStopReason.MaxTicksReached);
 
@@ -112,7 +112,7 @@ public class CompositeSinkTests
     {
         var composite = new CompositeSink();
         var bus = new EventBus();
-        var runtime = new Runtime(bus, new UserIntent("test"), 0);
+        var runtime = new Runtime(bus,  0);
 
         // Should not throw
         composite.OnTickStart(runtime);
@@ -132,7 +132,7 @@ public class CompositeSinkTests
         
         var composite = new CompositeSink(sink1, sink2, sink3);
         var bus = new EventBus();
-        var runtime = new Runtime(bus, new UserIntent("test"), 0);
+        var runtime = new Runtime(bus,  0);
 
         composite.OnTickStart(runtime);
 

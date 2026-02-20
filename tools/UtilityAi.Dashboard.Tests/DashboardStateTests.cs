@@ -12,8 +12,7 @@ public class DashboardStateTests
     private static Runtime MakeRuntime(int tick = 0)
     {
         var bus = new EventBus();
-        var intent = new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>());
-        return new Runtime(bus, intent, tick);
+        return new Runtime(bus, tick);
     }
 
     private static Proposal MakeProposal(string id, double prior = 1.0, double temperature = 1.0,
@@ -191,8 +190,7 @@ public class DashboardStateTests
         var state = new DashboardState();
         var bus = new EventBus();
         bus.Publish("hello"); // Publish a string fact
-        var intent = new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>());
-        var rt = new Runtime(bus, intent, 0);
+        var rt = new Runtime(bus, 0);
 
         var consideration = new HasFact<string>();
         var p1 = new Proposal("action.a", new[] { consideration }, _ => Task.CompletedTask);

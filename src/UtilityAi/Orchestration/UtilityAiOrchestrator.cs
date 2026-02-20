@@ -72,18 +72,18 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// <param name="ct">Cancellation token to allow early termination.</param>
     /// <param name="sink">Optional sink for observing orchestration events. Uses NullSink if not provided.</param>
     /// <returns>A task that completes when orchestration finishes.</returns>
-    public async Task RunAsync(UserIntent intent, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
+    public async Task RunAsync( int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
 
         for (int tick = 0; tick < maxTicks; tick++)
         {
-            var tickResult = await RunTickAsync(intent, tick, ct, sink);
+            var tickResult = await RunTickAsync(tick, ct, sink);
             if (tickResult == null) return;
         }
 
         // If we reached here naturally, we hit the tick cap
-        var finalRt = new Runtime(_bus, intent, maxTicks);
+        var finalRt = new Runtime(_bus, maxTicks);
         sink.OnStopped(finalRt, OrchestrationStopReason.MaxTicksReached);
     }
 
@@ -91,34 +91,34 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// Runs the orchestration loop until it reaches quiescence (utility below threshold) or hit max ticks.
     /// Perfect for chat agents where you want to "finish the thought".
     /// </summary>
-    public async Task RunUntilQuiescentAsync(UserIntent intent, double threshold, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
+    public async Task RunUntilQuiescentAsync( double threshold, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
 
         for (int tick = 0; tick < maxTicks; tick++)
         {
-            var result = await RunTickAsync(intent, tick, ct, sink);
+            var result = await RunTickAsync(tick, ct, sink);
             if (result == null) return;
 
             if (result.ChosenUtility < threshold)
             {
-                var rt = new Runtime(_bus, intent, tick);
+                var rt = new Runtime(_bus, tick);
                 sink.OnStopped(rt, OrchestrationStopReason.Quiescent);
                 return;
             }
         }
 
-        var finalRt = new Runtime(_bus, intent, maxTicks);
+        var finalRt = new Runtime(_bus, maxTicks);
         sink.OnStopped(finalRt, OrchestrationStopReason.MaxTicksReached);
     }
 
-    public async Task<OrchestrationTick?> RunTickAsync(UserIntent intent, int tick, CancellationToken ct, IOrchestrationSink? sink = null)
+    public async Task<OrchestrationTick?> RunTickAsync(int tick, CancellationToken ct, IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
 
-        if (TryHandleCancellation(_bus, intent, tick, sink, ct)) return null;
+        if (TryHandleCancellation(_bus, tick, sink, ct)) return null;
 
-        var rt = new Runtime(_bus, intent, tick);
+        var rt = new Runtime(_bus, tick);
         sink.OnTickStart(rt);
 
         await SenseAsyncAll(rt, ct);
@@ -140,10 +140,10 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         return new OrchestrationTick(tick, scored, choice.Value.chosen, choice.Value.utility);
     }
 
-    private static bool TryHandleCancellation(EventBus bus, UserIntent intent, int tick, IOrchestrationSink sink, CancellationToken ct)
+    private static bool TryHandleCancellation(EventBus bus, int tick, IOrchestrationSink sink, CancellationToken ct)
     {
         if (!ct.IsCancellationRequested) return false;
-        var cancelledRtEarly = new Runtime(bus, intent, tick);
+        var cancelledRtEarly = new Runtime(bus, tick);
         sink.OnStopped(cancelledRtEarly, OrchestrationStopReason.Cancelled);
         return true;
     }

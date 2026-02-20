@@ -10,7 +10,7 @@ public class ConsiderationTests
     public void HasFact_ReturnsOne_WhenFactExists_ElseZero()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus, 0);
         var cons = new HasFact<int>();
         Assert.Equal(0.0, cons.Evaluate(rt));
         bus.Publish(5);
@@ -21,7 +21,7 @@ public class ConsiderationTests
     public void NotHasFact_Inverts_HasFact()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus, 0);
         var cons = new NotHasFact<string>();
         Assert.Equal(1.0, cons.Evaluate(rt));
         bus.Publish("hi");
@@ -41,7 +41,7 @@ public class ConsiderationTests
     public void CurveSignal_DefaultsWhenMissing_AndClamps()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus, 0);
         var c = new CurveSignal<Sig>("c", s => s.V, v => v, defaultValue: 0.25);
         Assert.Equal(0.25, c.Evaluate(rt));
         bus.Publish(new Sig(2)); // project 2 -> clamp to 1

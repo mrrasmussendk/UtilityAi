@@ -10,7 +10,7 @@ public class IdleModuleTests
     public void IdleModule_AlwaysProposesIdleAction()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
         var module = new IdleModule();
 
         var proposals = module.Propose(rt).ToList();
@@ -23,7 +23,7 @@ public class IdleModuleTests
     public void IdleModule_HasLowUtility()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
         var module = new IdleModule(idleUtility: 0.001);
 
         var proposals = module.Propose(rt).ToList();
@@ -36,7 +36,7 @@ public class IdleModuleTests
     public async Task IdleModule_ActionCompletesSuccessfully()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
         var module = new IdleModule();
 
         var proposals = module.Propose(rt).ToList();

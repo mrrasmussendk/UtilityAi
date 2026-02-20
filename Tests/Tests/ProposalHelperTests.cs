@@ -43,7 +43,7 @@ public class ProposalHelperTests
             .Build();
 
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         
         // Without the fact, consideration evaluates to 0, but Proposal adds epsilon protection
         var utility1 = proposal.Utility(rt);
@@ -64,7 +64,7 @@ public class ProposalHelperTests
             .Build();
 
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         
         var utility = proposal.Utility(rt);
         Assert.Equal(0.75, utility);
@@ -84,7 +84,7 @@ public class ProposalHelperTests
             .Build();
 
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         
         Assert.InRange(proposalHigh.Utility(rt), 1.0 - 1e-5, 1.0 + 1e-5);
         Assert.True(proposalLow.Utility(rt) < 1e-5); // Should be very close to 0 (epsilon protected)
@@ -100,7 +100,7 @@ public class ProposalHelperTests
             .Build();
 
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         
         // Without the fact, should not be eligible
         Assert.False(proposal.IsEligible(rt));
@@ -122,7 +122,7 @@ public class ProposalHelperTests
         Assert.Equal(0.5, proposal.Prior);
 
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         
         // Utility should be prior * consideration
         var utility = proposal.Utility(rt);

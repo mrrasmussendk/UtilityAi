@@ -312,7 +312,7 @@ public async Task Orchestrator_ChoosesHighestUtility()
     var orch = new UtilityAiOrchestrator(bus: bus)
         .AddModule(new MyModule());
 
-    await orch.RunAsync(new UserIntent("test"), maxTicks: 1, CancellationToken.None, sink);
+    await orch.RunAsync( maxTicks: 1, CancellationToken.None, sink);
 
     Assert.Single(sink.ExecutedProposals);
     Assert.Equal("my.action", sink.ExecutedProposals[0]);

@@ -28,7 +28,7 @@ public sealed class LlmIntentSensorTests
             msg => msg.Text
         );
 
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>()), 1);
+        var rt = new Runtime(bus,  1);
 
         // Act
         await sensor.SenseAsync(rt, CancellationToken.None);
@@ -60,7 +60,7 @@ public sealed class LlmIntentSensorTests
 
         var mockLlm = new MockLlmClient(llmResponse);
         var sensor = LlmIntentSensor.ForMessageType<UserMessage>(mockLlm, msg => msg.Text);
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>()), 1);
+        var rt = new Runtime(bus,  1);
 
         // Act
         await sensor.SenseAsync(rt, CancellationToken.None);
@@ -81,7 +81,7 @@ public sealed class LlmIntentSensorTests
 
         var mockLlm = new MockLlmClient("{}");
         var sensor = LlmIntentSensor.ForMessageType<UserMessage>(mockLlm, msg => msg.Text);
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>()), 1);
+        var rt = new Runtime(bus,  1);
 
         // Act
         await sensor.SenseAsync(rt, CancellationToken.None);
@@ -99,7 +99,7 @@ public sealed class LlmIntentSensorTests
 
         var mockLlm = new MockLlmClient("{}");
         var sensor = LlmIntentSensor.ForMessageType<UserMessage>(mockLlm, msg => msg.Text);
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>()), 1);
+        var rt = new Runtime(bus,  1);
 
         // Act
         await sensor.SenseAsync(rt, CancellationToken.None);
@@ -117,7 +117,7 @@ public sealed class LlmIntentSensorTests
 
         var mockLlm = new MockLlmClient("This is not JSON");
         var sensor = LlmIntentSensor.ForMessageType<UserMessage>(mockLlm, msg => msg.Text);
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>()), 1);
+        var rt = new Runtime(bus,  1);
 
         // Act
         await sensor.SenseAsync(rt, CancellationToken.None);
@@ -138,7 +138,7 @@ public sealed class LlmIntentSensorTests
 
         var mockLlm = new MockLlmClient("{}");
         var sensor = LlmIntentSensor.ForMessageType<UserMessage>(mockLlm, msg => msg.Text);
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>()), 1);
+        var rt = new Runtime(bus,  1);
 
         // Act
         await sensor.SenseAsync(rt, CancellationToken.None);

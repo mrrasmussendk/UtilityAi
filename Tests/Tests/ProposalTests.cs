@@ -16,7 +16,7 @@ public class ProposalTests
     public void Utility_PriorTimesGeometricMeanOfConsiderations()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("test"), 0);
+        var rt = new Runtime(bus,  0);
         var p = new Proposal(
             id: "x",
             cons: new IConsideration[] { new ConstCons(0.8), new ConstCons(0.5) },
@@ -34,7 +34,7 @@ public class ProposalTests
     public void Utility_ClampsAndUsesEpsilonFloor()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("test"), 0);
+        var rt = new Runtime(bus,  0);
         var p = new Proposal(
             id: "x",
             cons: new IConsideration[] { new ConstCons(-10), new ConstCons(2.5) }, // clamp to [0,1]
@@ -51,7 +51,7 @@ public class ProposalTests
     public void Utility_WithNoConsiderations_EqualsPrior()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("test"), 0);
+        var rt = new Runtime(bus,  0);
         var p = new Proposal(
             id: "x",
             cons: System.Array.Empty<IConsideration>(),
@@ -66,7 +66,7 @@ public class ProposalTests
     public void Utility_AllZeroConsiderations_ResultIsEpsilon()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("test"), 0);
+        var rt = new Runtime(bus,  0);
         var p = new Proposal(
             id: "x",
             cons: new IConsideration[] { new ConstCons(-1), new ConstCons(0), new ConstCons(0) },

@@ -94,8 +94,7 @@ public static class IntentBasedAgentExample
 
         // Run orchestration
         var result = await orchestrator.RunTickAsync(
-            new UserIntent("demo"),
-            tick: 0,
+           tick: 0,
             CancellationToken.None
         );
 

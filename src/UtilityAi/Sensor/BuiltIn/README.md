@@ -648,7 +648,7 @@ public async Task TimeSensor_PublishesTimeFacts()
 {
     var bus = new EventBus();
     var sensor = new TimeSensor();
-    var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+    var rt = new Runtime(bus, 0);
 
     await sensor.SenseAsync(rt, CancellationToken.None);
 

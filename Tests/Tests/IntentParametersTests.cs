@@ -161,7 +161,7 @@ public class IntentParametersTests
             .WithAction(async ct => await Task.CompletedTask)
             .Build();
 
-        var rt = new Runtime(bus, new UserIntent("test"), 0);
+        var rt = new Runtime(bus, 0);
 
         // Act
         var utility = proposal.Utility(rt);
@@ -214,10 +214,9 @@ public class IntentParametersTests
         var orchestrator = new UtilityAiOrchestrator(bus: bus)
             .AddModule(new TestIntentModule());
 
-        var intent = new UserIntent("test");
 
         // Act
-        var result = await orchestrator.RunTickAsync(intent, 0, CancellationToken.None);
+        var result = await orchestrator.RunTickAsync(0, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);
@@ -243,10 +242,9 @@ public class IntentParametersTests
         var orchestrator = new UtilityAiOrchestrator(bus: bus)
             .AddModule(new TestIntentModule());
 
-        var intent = new UserIntent("test");
 
         // Act
-        var result = await orchestrator.RunTickAsync(intent, 0, CancellationToken.None);
+        var result = await orchestrator.RunTickAsync(0, CancellationToken.None);
 
         // Assert
         Assert.NotNull(result);

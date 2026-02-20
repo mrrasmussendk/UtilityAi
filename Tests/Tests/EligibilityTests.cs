@@ -59,7 +59,7 @@ public class EligibilityTests
         );
 
         orch.AddModule(new NoopModule(ineligible, eligible));
-        await orch.RunAsync(new UserIntent("test"), 1, CancellationToken.None, sink);
+        await orch.RunAsync( 1, CancellationToken.None, sink);
 
         Assert.Single(sink.Ticks);
         var tick = sink.Ticks[0];
@@ -94,7 +94,7 @@ public class EligibilityTests
             eligibilities: new IEligibility[] { new NotHasFactEligible<int>() });
 
         orch.AddModule(new NoopModule(p1, p2));
-        await orch.RunAsync(new UserIntent("test"), 1, CancellationToken.None, sink);
+        await orch.RunAsync( 1, CancellationToken.None, sink);
 
         Assert.Equal(OrchestrationStopReason.NoEligibleProposals, sink.Reason);
     }
@@ -103,7 +103,7 @@ public class EligibilityTests
     public void Proposal_Without_Eligibilities_Is_Eligible_BackCompat()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         var p = new Proposal("X", Enumerable.Empty<IConsideration>(), ct => Task.CompletedTask);
         Assert.True(p.IsEligible(rt));
     }
@@ -113,7 +113,7 @@ public class EligibilityTests
     {
         // Test for Bug #4: NoRepeatEligible should handle null stack gracefully
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         var eligibility = new NoRepeatEligible("test-id");
         
         // Should return true when stack doesn't exist (null)
@@ -124,7 +124,7 @@ public class EligibilityTests
     public void NoRepeatEligible_Returns_False_When_Id_In_Stack()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         var eligibility = new NoRepeatEligible("test-id");
         
         // Create a stack with the ID
@@ -140,7 +140,7 @@ public class EligibilityTests
     public void NoRepeatEligible_Returns_True_When_Id_Not_In_Stack()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent("t"), 0);
+        var rt = new Runtime(bus,  0);
         var eligibility = new NoRepeatEligible("test-id");
         
         // Create a stack without the ID

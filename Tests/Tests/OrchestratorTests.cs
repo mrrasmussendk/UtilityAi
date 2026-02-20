@@ -59,8 +59,7 @@ public class OrchestratorTests
         // Module B lower baseScore
         orch.AddModule(new PublishFactModule<string>("B", id: "B", baseScore: 0.2));
 
-        var intent = new UserIntent("test");
-        await orch.RunAsync(intent, 1, CancellationToken.None);
+        await orch.RunAsync(1, CancellationToken.None);
 
         Assert.Equal("A", bus.GetOrDefault<string>());
     }

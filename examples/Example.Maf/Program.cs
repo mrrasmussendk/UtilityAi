@@ -32,16 +32,9 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddModule(new MyModule(mafClient));
 
 // --- Step 3: Run the orchestrator ---
-var intent = new UserIntent(
-    Goal: new IntentGoal("answer-question"),
-    Slots: new Dictionary<string, object?>
-    {
-        ["query"] = "What are the benefits of utility-based AI?"
-    }
-);
 
 Console.WriteLine("🔄 Running orchestration...\n");
-await orchestrator.RunAsync(intent, maxTicks: 2, CancellationToken.None);
+await orchestrator.RunAsync(maxTicks: 2, CancellationToken.None);
 
 Console.WriteLine("\n✅ Done!");
 
@@ -67,7 +60,7 @@ file sealed class MyModule : ICapabilityModule
             act: async ct =>
             {
                 // Get prompt from intent
-                var prompt = rt.Intent.Slots?["query"]?.ToString() ?? "No query provided";
+                var prompt = "No query provided";
 
                 // Create agent using MafClient
                 var agent = _mafClient.CreateAgent(

@@ -30,7 +30,7 @@ public class ProductionReadinessTests
         // 1: Utility 1.0 (Executes)
         // 2: Utility 0.7 (Executes)
         // 3: Utility 0.4 (Under threshold -> Stop)
-        await orch.RunUntilQuiescentAsync(intent, threshold: 0.5, maxTicks: 10, CancellationToken.None, sink);
+        await orch.RunUntilQuiescentAsync(threshold: 0.5, maxTicks: 10, CancellationToken.None, sink);
 
         // Assert
         Assert.Equal(3, sink.Ticks.Count); 
@@ -58,7 +58,7 @@ public class ProductionReadinessTests
         var intent = new UserIntent(new IntentGoal("test"));
 
         // Act - Run tick 0
-        var res0 = await orch.RunTickAsync(intent, 0, CancellationToken.None, sink);
+        var res0 = await orch.RunTickAsync(0, CancellationToken.None, sink);
         Assert.NotNull(res0);
         
         // Manual verification
@@ -67,7 +67,7 @@ public class ProductionReadinessTests
         Assert.Contains("action-1", hist);
 
         // Run tick 1 - This should return null because action-1 now has utility <= Eps
-        var res1 = await orch.RunTickAsync(intent, 1, CancellationToken.None, sink);
+        var res1 = await orch.RunTickAsync(1, CancellationToken.None, sink);
 
         // Assert
         Assert.Equal(1, sink.Ticks.Count); 

@@ -82,16 +82,7 @@ internal sealed class CapabilityFilterWrapper : ICapabilityModule
             return (bool)tryGetMethod.Invoke(rt.Bus, parameters)!;
         }
 
-        // Intent slot condition
-        if (condition.IntentSlot is not null && condition.AllowedValues is not null)
-        {
-            if (rt.Intent.Slots is null || !rt.Intent.Slots.TryGetValue(condition.IntentSlot, out var slotValue))
-                return false;
-
-            var slotStr = slotValue?.ToString() ?? "";
-            return condition.AllowedValues.Contains(slotStr, StringComparer.OrdinalIgnoreCase);
-        }
-
+     
         return true; // No condition specified, always active
     }
 

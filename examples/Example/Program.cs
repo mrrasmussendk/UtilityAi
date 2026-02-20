@@ -52,10 +52,6 @@ bus.Publish(new AvailableTools(
     RateLimitRemaining: 10
 ));
 
-var intent = new UserIntent(
-    Goal: new IntentGoal("respond-to-user"),
-    Slots: new Dictionary<string, object?> { ["user_id"] = "user-123" }
-);
 
 Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 Console.WriteLine("📊 Initial EventBus State:");
@@ -91,7 +87,7 @@ Console.WriteLine("━━━━━━━━━━━━━━━━━━━━�
 Console.WriteLine("🔄 Running Orchestration Loop:");
 Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-await orchestrator.RunAsync(intent, maxTicks: 5, CancellationToken.None,
+await orchestrator.RunAsync(maxTicks: 5, CancellationToken.None,
     sink: new DetailedConsoleSink());
 
 Console.WriteLine();

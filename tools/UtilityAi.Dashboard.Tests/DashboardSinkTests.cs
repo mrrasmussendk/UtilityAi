@@ -11,8 +11,7 @@ public class DashboardSinkTests
     private static Runtime MakeRuntime(int tick = 0)
     {
         var bus = new EventBus();
-        var intent = new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>());
-        return new Runtime(bus, intent, tick);
+        return new Runtime(bus, tick);
     }
 
     private static Proposal MakeProposal(string id)
@@ -77,8 +76,7 @@ public class DashboardSinkTests
         var orchestrator = new UtilityAiOrchestrator(bus: bus);
         orchestrator.AddModule(new TestModule());
 
-        var intent = new UserIntent(new IntentGoal("test"), new Dictionary<string, object?>());
-        await orchestrator.RunAsync(intent, maxTicks: 2, CancellationToken.None, sink: sink);
+        await orchestrator.RunAsync(maxTicks: 2, CancellationToken.None, sink: sink);
 
         // Should have captured ticks
         Assert.True(state.Ticks.Count > 0);

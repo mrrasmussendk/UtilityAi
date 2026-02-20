@@ -107,7 +107,7 @@ await orchestrator.RunAsync(intent, maxTicks: 1000, ct);
 public void IdleModule_AlwaysProposesIdleAction()
 {
     var bus = new EventBus();
-    var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+    var rt = new Runtime(bus, 0);
     var module = new IdleModule();
 
     var proposals = module.Propose(rt).ToList();
@@ -120,7 +120,7 @@ public void IdleModule_AlwaysProposesIdleAction()
 public async Task IdleModule_ActionCompletesSuccessfully()
 {
     var bus = new EventBus();
-    var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+    var rt = new Runtime(bus, 0);
     var module = new IdleModule();
 
     var proposals = module.Propose(rt).ToList();
@@ -268,7 +268,7 @@ public async Task CleanupModule_ClearsFacts()
     var bus = new EventBus();
     bus.Publish(new ElapsedTime(TimeSpan.FromMinutes(10))); // Past interval
 
-    var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+    var rt = new Runtime(bus, 0);
     var module = new CleanupModule(
         typesToClean: new[] { typeof(TempData) },
         cleanupInterval: TimeSpan.FromMinutes(5)
@@ -462,7 +462,7 @@ public void StopOnSignalModule_ProposesWhenSignalExists()
     var bus = new EventBus();
     bus.Publish(new StopSignal("test"));
 
-    var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+    var rt = new Runtime(bus, 0);
     var module = new StopOnSignalModule();
 
     var proposals = module.Propose(rt).ToList();
@@ -477,7 +477,7 @@ public async Task StopOnSignalModule_PublishesStopEvent()
     var bus = new EventBus();
     bus.Publish(new StopSignal("test reason"));
 
-    var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+    var rt = new Runtime(bus, 0);
     var module = new StopOnSignalModule();
 
     var proposals = module.Propose(rt).ToList();

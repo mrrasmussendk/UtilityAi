@@ -81,7 +81,7 @@ public class OrchestrationSensorStopTests
         // Add a module that would otherwise propose and act
         orch.AddModule(new CountingModule());
 
-        await orch.RunAsync(new UserIntent("test"), 5, CancellationToken.None, cap);
+        await orch.RunAsync( 5, CancellationToken.None, cap);
 
         // Verify orchestrator stopped for the reason and before any choice was made
         Assert.Equal(OrchestrationStopReason.GoalAchieved, cap.Reason);
@@ -97,7 +97,7 @@ public class OrchestrationSensorStopTests
         var module = new CountingModule();
         orch.AddModule(module);
 
-        await orch.RunAsync(new UserIntent("test"), 3, CancellationToken.None);
+        await orch.RunAsync( 3, CancellationToken.None);
 
         // Because stop happens after sensing and before proposal gathering,
         // module.Propose should not have been called at all, and thus Act never runs.

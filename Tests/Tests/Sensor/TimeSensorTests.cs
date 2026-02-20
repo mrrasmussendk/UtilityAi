@@ -12,7 +12,7 @@ public class TimeSensorTests
     {
         var bus = new EventBus();
         var sensor = new TimeSensor();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
 
         await sensor.SenseAsync(rt, CancellationToken.None);
 
@@ -33,13 +33,13 @@ public class TimeSensorTests
         var sensor = new TimeSensor();
 
         // First tick
-        var rt1 = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt1 = new Runtime(bus, 0);
         await sensor.SenseAsync(rt1, CancellationToken.None);
 
         await Task.Delay(100);
 
         // Second tick
-        var rt2 = new Runtime(bus, new UserIntent(new IntentGoal("test")), 1);
+        var rt2 = new Runtime(bus, 1);
         await sensor.SenseAsync(rt2, CancellationToken.None);
 
         var elapsedTime = bus.GetOrDefault<ElapsedTime>();

@@ -12,7 +12,7 @@ public class CooldownTests
     public void Cooldown_NoEvent_ReturnsOne()
     {
         var bus = new EventBus();
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
 
         var consideration = new Cooldown<TestEvent>(TimeSpan.FromSeconds(10));
         var result = consideration.Evaluate(rt);
@@ -27,7 +27,7 @@ public class CooldownTests
         bus.Publish(new TestEvent("data"));
         await Task.Delay(100); // Small delay, well within cooldown
 
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
 
         var consideration = new Cooldown<TestEvent>(TimeSpan.FromSeconds(10));
         var result = consideration.Evaluate(rt);
@@ -42,7 +42,7 @@ public class CooldownTests
         bus.Publish(new TestEvent("data"));
         await Task.Delay(1100); // Wait for cooldown to expire
 
-        var rt = new Runtime(bus, new UserIntent(new IntentGoal("test")), 0);
+        var rt = new Runtime(bus, 0);
 
         var consideration = new Cooldown<TestEvent>(TimeSpan.FromSeconds(1));
         var result = consideration.Evaluate(rt);
