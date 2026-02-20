@@ -334,8 +334,8 @@ public sealed record IntentAnalysis(
 };
 
 /// <summary>
-/// Internal fact tracking when LlmIntentSensor last analyzed intent.
+/// Fact tracking when LlmIntentSensor last analyzed intent.
 /// Stores the action count from ExecutionHistory at the time of analysis.
 /// Used to detect when new actions have executed and re-analysis should occur.
 /// </summary>
-internal sealed record LastIntentAnalysisContext(int ActionCount);
+public sealed record LastIntentAnalysisContext(int ActionCount);

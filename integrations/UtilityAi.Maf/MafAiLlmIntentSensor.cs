@@ -15,6 +15,16 @@ namespace UtilityAi.Maf;
 /// Sensor that uses OpenAI's AiRequestBuilder to analyze user messages and publish structured facts to EventBus.
 /// The LLM interprets intent and extracts entities - it does NOT pick actions.
 /// The utility system then reacts naturally to these published facts.
+/// 
+/// Re-analysis behavior:
+/// - By default, analyzes once per message and never again (backward compatible)
+/// - With reanalyzeAfterActions=true, re-analyzes after each action execution
+/// - Uses ExecutionHistory on the bus to detect when new actions have run
+/// - Example: After research completes, LLM determines next step (summarize, search again, etc.)
+/// 
+/// Important: IntentAnalysis is advisory, not directive.
+/// The LLM's intent analysis informs considerations but does not override utility scoring.
+/// Your considerations encode the true business logic - the LLM provides contextual guidance.
 /// </summary>
 public sealed class MafAiLlmIntentSensor : ISensor
 {
@@ -23,6 +33,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
     private readonly Type _messageType;
     private readonly Func<object, string> _messageExtractor;
     private readonly bool _includeCapabilities;
+    private readonly bool _reanalyzeAfterActions;
     private readonly SchemaGeneratorOptions _schemaOptions;
 
     /// <summary>
@@ -33,6 +44,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
     /// <param name="messageType">Type of message fact to analyze (e.g., UserMessage).</param>
     /// <param name="messageExtractor">Function to extract text from the message object.</param>
     /// <param name="includeCapabilities">If true, includes available actions in LLM context for better intent understanding.</param>
+    /// <param name="reanalyzeAfterActions">If true, re-analyzes intent after actions execute to determine next steps based on results. Default is false for backward compatibility.</param>
     /// <param name="schemaOptions">Schema generation options for JSON schema.</param>
     public MafAiLlmIntentSensor(
         ChatClient chatClient,
@@ -40,6 +52,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         Type messageType,
         Func<object, string> messageExtractor,
         bool includeCapabilities = false,
+        bool reanalyzeAfterActions = false,
         SchemaGeneratorOptions? schemaOptions = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
@@ -47,6 +60,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         _messageType = messageType ?? throw new ArgumentNullException(nameof(messageType));
         _messageExtractor = messageExtractor ?? throw new ArgumentNullException(nameof(messageExtractor));
         _includeCapabilities = includeCapabilities;
+        _reanalyzeAfterActions = reanalyzeAfterActions;
         _schemaOptions = schemaOptions ?? new SchemaGeneratorOptions
         {
             RequiredStrategy = RequiredStrategy.AllProperties
@@ -61,6 +75,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         string model,
         Func<T, string> messageExtractor,
         bool includeCapabilities = false,
+        bool reanalyzeAfterActions = false,
         SchemaGeneratorOptions? schemaOptions = null) where T : class
     {
         return new MafAiLlmIntentSensor(
@@ -69,16 +84,13 @@ public sealed class MafAiLlmIntentSensor : ISensor
             typeof(T),
             obj => messageExtractor((T)obj),
             includeCapabilities,
+            reanalyzeAfterActions,
             schemaOptions
         );
     }
 
     public async Task SenseAsync(Runtime rt, CancellationToken ct)
     {
-        // Check if we've already analyzed this message
-        var existingAnalysis = rt.Bus.GetOrDefault<IntentAnalysis>();
-        if (existingAnalysis != null) return;  // Already analyzed
-
         // Get the message to analyze using reflection
         var getMethod = typeof(EventBus).GetMethod(nameof(EventBus.GetOrDefault))!
             .MakeGenericMethod(_messageType);
@@ -87,6 +99,9 @@ public sealed class MafAiLlmIntentSensor : ISensor
 
         var messageText = _messageExtractor(message);
         if (string.IsNullOrWhiteSpace(messageText)) return;
+
+        // Check if we should re-analyze based on execution history
+        if (!ShouldAnalyze(rt.Bus)) return;
 
         // Build prompt
         var prompt = BuildPrompt(messageText, rt);
@@ -98,9 +113,31 @@ public sealed class MafAiLlmIntentSensor : ISensor
             .WithJsonSchemaFrom<IntentAnalysis>("intent", _schemaOptions, strict:false)
             .CompleteAndDeserialize<IntentAnalysis>(_chatClient);
 
-
         // Publish facts
         rt.Bus.Publish(completion);
+        
+        // Track what we've analyzed
+        var executionHistory = rt.Bus.GetOrDefault<ExecutionHistory>();
+        var actionCount = executionHistory?.Actions.Count ?? 0;
+        rt.Bus.Publish(new LastIntentAnalysisContext(actionCount));
+    }
+
+    private bool ShouldAnalyze(EventBus bus)
+    {
+        var lastContext = bus.GetOrDefault<LastIntentAnalysisContext>();
+        
+        // First time analyzing - always proceed
+        if (lastContext == null) return true;
+        
+        // If reanalyzeAfterActions is false, only analyze once
+        if (!_reanalyzeAfterActions) return false;
+        
+        // Check if new actions have executed since last analysis
+        var executionHistory = bus.GetOrDefault<ExecutionHistory>();
+        var currentActionCount = executionHistory?.Actions.Count ?? 0;
+        
+        // Re-analyze if action count has changed (new actions executed)
+        return currentActionCount > lastContext.ActionCount;
     }
 
     private string BuildPrompt(string messageText, Runtime rt)
