@@ -1,4 +1,5 @@
-﻿using UtilityAi.Consideration.General;
+using UtilityAi.Consideration.General;
+using UtilityAi.Consideration;
 using UtilityAi.Utils;
 using Xunit;
 
@@ -55,5 +56,15 @@ public class ConsiderationTests
     {
         var c = new CurveSignal<Sig>("test-signal", s => s.V, v => v);
         Assert.Equal("test-signal", c.Name);
+    }
+
+    [Fact]
+    public void NoRepeatConsideration_ReturnsOne_WhenHistoryFactMissing()
+    {
+        var bus = new EventBus();
+        var rt = new Runtime(bus, 0);
+        var consideration = new NoRepeatConsideration("action-1");
+
+        Assert.Equal(1.0, consideration.Evaluate(rt));
     }
 }

@@ -31,7 +31,7 @@ public sealed class NoRepeatConsideration : IConsideration
     {
         // Retrieve the standardized execution history from the EventBus.
         // The orchestrator publishes this as an IReadOnlyList<string> at the end of each tick.
-        if (rt.Bus.TryGet<IReadOnlyList<string>>(out var historyList))
+        if (rt.Bus.TryGet<IReadOnlyList<string>>(out var historyList) && historyList is not null)
         {
             // Check the most recent N ticks (defined by _lookback).
             // historyList[0] is the most recent execution.

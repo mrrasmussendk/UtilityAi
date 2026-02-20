@@ -35,6 +35,15 @@ public class OrchestratorTests
 
     }
 
+    private sealed class CopyingSelectionStrategy : ISelectionStrategy
+    {
+        public Proposal Select(IReadOnlyList<(Proposal P, double Utility)> scored, Runtime rt)
+        {
+            var selected = scored[0].P;
+            return new Proposal(selected.Id, Enumerable.Empty<IConsideration>(), _ => Task.CompletedTask);
+        }
+    }
+
     [Fact]
     public async Task Orchestrator_ChoosesHighestUtility()
     {
@@ -75,5 +84,20 @@ public class OrchestratorTests
         Assert.Single(snapshot.Capabilities);
         Assert.Equal("PublishFactModule`1", snapshot.Capabilities[0].ModuleName);
         Assert.Equal("TestModule", snapshot.Capabilities[0].PotentialActions[0].ProposalId);
+    }
+
+    [Fact]
+    public async Task Orchestrator_MatchesSelectorCopyById()
+    {
+        var bus = new EventBus();
+        var orch = new UtilityAiOrchestrator(new CopyingSelectionStrategy(), true, bus);
+        orch.AddSensor(new NoopSensor());
+        orch.AddModule(new PublishFactModule<string>("A", id: "A", baseScore: 0.9));
+
+        var tick = await orch.RunTickAsync(0, CancellationToken.None);
+
+        Assert.NotNull(tick);
+        Assert.Equal("A", tick.Chosen.Id);
+        Assert.Equal("A", bus.GetOrDefault<string>());
     }
 }

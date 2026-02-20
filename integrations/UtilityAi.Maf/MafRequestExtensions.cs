@@ -235,7 +235,7 @@ public static class MafRequestExtensions
             var result = System.Text.Json.JsonSerializer.Deserialize<T>(element);
             return result != null;
         }
-        catch
+        catch (System.Text.Json.JsonException)
         {
             return false;
         }

@@ -52,6 +52,27 @@ public class IntentParametersTests
     }
 
     [Fact]
+    public void IntentAnalysis_GetParameter_DoesNotReadObsoleteParameters()
+    {
+        using var urgencyDoc = System.Text.Json.JsonDocument.Parse("0.85");
+        var parameters = new Dictionary<string, System.Text.Json.JsonElement>
+        {
+            ["urgency"] = urgencyDoc.RootElement.Clone()
+        };
+
+        #pragma warning disable CS0618
+        var intent = new IntentAnalysis(
+            Intent: "test",
+            Entities: null,
+            Confidence: 0.9,
+            Parameters: parameters
+        );
+        #pragma warning restore CS0618
+
+        Assert.Equal(0.5, intent.GetParameter("urgency", 0.5));
+    }
+
+    [Fact]
     public void IntentAnalysis_ParameterAbove_WorksCorrectly()
     {
         // Arrange
