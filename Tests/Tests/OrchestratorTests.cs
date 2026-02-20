@@ -33,19 +33,6 @@ public class OrchestratorTests
             );
         }
 
-        public IEnumerable<ProposalDefinition> GetProposalDefinitions()
-        {
-            yield return new ProposalDefinition(
-                ProposalId: id,
-                Description: null,
-                Prior: 1.0,
-                Temperature: 0.0,
-                ConsiderationNames: new List<string>(),
-                EligibilityNames: new List<string>(),
-                NoRepeat: false,
-                JsonOutput: null
-            );
-        }
     }
 
     [Fact]

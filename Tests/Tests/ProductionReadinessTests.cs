@@ -86,19 +86,6 @@ public class ProductionReadinessTests
             );
         }
 
-        public IEnumerable<ProposalDefinition> GetProposalDefinitions()
-        {
-            yield return new ProposalDefinition(
-                ProposalId: "decreasing-action",
-                Description: null,
-                Prior: 1.0,
-                Temperature: 0.0,
-                ConsiderationNames: new List<string> { "Constant" },
-                EligibilityNames: new List<string>(),
-                NoRepeat: false,
-                JsonOutput: null
-            );
-        }
     }
 
     private class RepeatableModule : ICapabilityModule
@@ -112,19 +99,6 @@ public class ProductionReadinessTests
             );
         }
 
-        public IEnumerable<ProposalDefinition> GetProposalDefinitions()
-        {
-            yield return new ProposalDefinition(
-                ProposalId: "action-1",
-                Description: null,
-                Prior: 1.0,
-                Temperature: 0.0,
-                ConsiderationNames: new List<string> { "NoRepeatConsideration" },
-                EligibilityNames: new List<string>(),
-                NoRepeat: false,
-                JsonOutput: null
-            );
-        }
     }
 
     private class ConstantConsideration : IConsideration

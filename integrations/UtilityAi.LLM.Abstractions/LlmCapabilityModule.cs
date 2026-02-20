@@ -23,8 +23,6 @@ public abstract class LlmCapabilityModule : ICapabilityModule
 
     public abstract IEnumerable<Proposal> Propose(Runtime rt);
 
-    public abstract IEnumerable<ProposalDefinition> GetProposalDefinitions();
-
     /// <summary>
     /// Builds conversation history from EventBus for a specific message type.
     /// </summary>

@@ -55,14 +55,22 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// </summary>
     /// <param name="s">The sensor to register.</param>
     /// <returns>This orchestrator instance for fluent chaining.</returns>
-    public UtilityAiOrchestrator AddSensor(ISensor s) { _sensors.Add(s); return this; }
+    public UtilityAiOrchestrator AddSensor(ISensor s)
+    {
+        _sensors.Add(s);
+        return this;
+    }
 
     /// <summary>
     /// Registers a capability module that will propose candidate actions each tick.
     /// </summary>
     /// <param name="m">The module to register.</param>
     /// <returns>This orchestrator instance for fluent chaining.</returns>
-    public UtilityAiOrchestrator AddModule(ICapabilityModule m) { _modules.Add(m); return this; }
+    public UtilityAiOrchestrator AddModule(ICapabilityModule m)
+    {
+        _modules.Add(m);
+        return this;
+    }
 
     /// <summary>
     /// Runs the orchestration loop for the specified number of ticks or until a stop condition is met.
@@ -72,7 +80,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// <param name="ct">Cancellation token to allow early termination.</param>
     /// <param name="sink">Optional sink for observing orchestration events. Uses NullSink if not provided.</param>
     /// <returns>A task that completes when orchestration finishes.</returns>
-    public async Task RunAsync( int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
+    public async Task RunAsync(int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
 
@@ -91,7 +99,8 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// Runs the orchestration loop until it reaches quiescence (utility below threshold) or hit max ticks.
     /// Perfect for chat agents where you want to "finish the thought".
     /// </summary>
-    public async Task RunUntilQuiescentAsync( double threshold, int maxTicks, CancellationToken ct, IOrchestrationSink? sink = null)
+    public async Task RunUntilQuiescentAsync(double threshold, int maxTicks, CancellationToken ct,
+        IOrchestrationSink? sink = null)
     {
         sink ??= NullSink.Instance;
 
@@ -133,7 +142,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         if (choice is null) return null;
 
         await ActAndNotify(choice.Value.chosen, rt, sink, ct);
-        
+
         _executionStack.Push(choice.Value.chosen.Id);
         _bus.Publish<IReadOnlyList<string>>(_executionStack.ToList());
 
@@ -180,7 +189,8 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         return eligible;
     }
 
-    private List<(Proposal p, double u)> ScoreProposalsAndNotify(Runtime rt, IEnumerable<Proposal> proposals, IOrchestrationSink sink)
+    private List<(Proposal p, double u)> ScoreProposalsAndNotify(Runtime rt, IEnumerable<Proposal> proposals,
+        IOrchestrationSink sink)
     {
         var scored = proposals
             .Select(p => (p, u: p.Utility(rt)))
@@ -190,17 +200,18 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         return scored;
     }
 
-    private (Proposal chosen, double utility)? ChooseAndMaybeStopAtZero(Runtime rt, List<(Proposal p, double u)> scored, IOrchestrationSink sink, bool stopAtZero)
+    private (Proposal chosen, double utility)? ChooseAndMaybeStopAtZero(Runtime rt, List<(Proposal p, double u)> scored,
+        IOrchestrationSink sink, bool stopAtZero)
     {
         var chosen = _selector.Select(scored.Select(x => (x.p, x.u)).ToList(), rt);
         var match = scored.FirstOrDefault(x => ReferenceEquals(x.p, chosen));
-        
+
         // If chosen proposal is not found in scored list, this indicates a selector bug
         if (match.p == null)
         {
             throw new InvalidOperationException("Selection strategy returned a proposal not in the scored list.");
         }
-        
+
         var chosenUtility = match.u;
 
         // Note: We use a small epsilon check because Proposal.Utility uses 1e-6 as a floor for considerations.
@@ -224,31 +235,63 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// <summary>
     /// Introspects all registered capability modules and returns metadata about their potential actions.
     /// Useful for planning, LLM context building, and debugging.
-    /// This method does not require a runtime context and returns static capability information.
     /// </summary>
     /// <returns>A list of capability information including all proposals each module can generate.</returns>
     public IReadOnlyList<CapabilityInfo> GetCapabilitiesInfo()
+    {
+        // Create a dummy runtime to get proposals from modules
+        var dummyBus = new EventBus();
+        var dummyRt = new Runtime(dummyBus, 0);
+
+        return _modules.Select(module =>
+        {
+            var moduleName = module.GetType().Name;
+            var moduleTypeName = module.GetType().FullName ?? moduleName;
+
+            var proposals = module.Propose(dummyRt).Select(p => new ProposalInfo(
+                ProposalId: p.Id,
+                Description: p.Description,
+                Prior: p.Prior,
+                Temperature: p.Temperature,
+                ConsiderationNames: p.Considerations.Select(c => c.Name).ToList(),
+                EligibilityNames: p.Eligibilities.Select(e => e.GetType().Name).ToList(),
+                NoRepeat: p.NoRepeat,
+                JsonOutput: p.JsonOutput,
+                IntentMatch: p.IntentMatch,
+                IntentParameters: p.IntentParameters
+            )).ToList();
+
+            return new CapabilityInfo(moduleName, moduleTypeName, proposals);
+        }).ToList();
+    }
+    
+    /// <summary>
+    /// Introspects all registered capability modules and returns metadata about their potential actions.
+    /// Useful for planning, LLM context building, and debugging.
+    /// </summary>
+    /// <returns>A list of capability information including all proposals each module can generate.</returns>
+    public IReadOnlyList<CapabilityInfo> GetCapabilitiesInfo(Runtime rt)
     {
         return _modules.Select(module =>
         {
             var moduleName = module.GetType().Name;
             var moduleTypeName = module.GetType().FullName ?? moduleName;
 
-            // Call GetProposalDefinitions to get static metadata about proposals
-            var proposals = module.GetProposalDefinitions().Select(def => new ProposalInfo(
-                ProposalId: def.ProposalId,
-                Description: def.Description,
-                Prior: def.Prior,
-                Temperature: def.Temperature,
-                ConsiderationNames: def.ConsiderationNames,
-                EligibilityNames: def.EligibilityNames,
-                NoRepeat: def.NoRepeat,
-                JsonOutput: def.JsonOutput,
-                IntentMatch: def.IntentMatch,
-                IntentParameters: def.IntentParameters
+            var proposals = module.Propose(rt).Select(p => new ProposalInfo(
+                ProposalId: p.Id,
+                Description: p.Description,
+                Prior: p.Prior,
+                Temperature: p.Temperature,
+                ConsiderationNames: p.Considerations.Select(c => c.Name).ToList(),
+                EligibilityNames: p.Eligibilities.Select(e => e.GetType().Name).ToList(),
+                NoRepeat: p.NoRepeat,
+                JsonOutput: p.JsonOutput,
+                IntentMatch: p.IntentMatch,
+                IntentParameters: p.IntentParameters
             )).ToList();
 
             return new CapabilityInfo(moduleName, moduleTypeName, proposals);
         }).ToList();
     }
+
 }

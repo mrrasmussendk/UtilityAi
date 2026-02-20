@@ -22,11 +22,4 @@ public interface ICapabilityModule
     /// <param name="rt">The current runtime context, providing access to the EventBus, Intent, and tick number.</param>
     /// <returns>An enumerable of proposals. May return empty if no actions are appropriate for the current state.</returns>
     IEnumerable<Proposal> Propose(Runtime rt);
-
-    /// <summary>
-    /// Returns static metadata about all proposals this module can potentially generate.
-    /// This method should not depend on runtime state and is used for introspection and capability discovery.
-    /// </summary>
-    /// <returns>An enumerable of proposal definitions describing what this module can do.</returns>
-    IEnumerable<ProposalDefinition> GetProposalDefinitions();
 }

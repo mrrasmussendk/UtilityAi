@@ -82,13 +82,7 @@ internal sealed class CapabilityFilterWrapper : ICapabilityModule
             return (bool)tryGetMethod.Invoke(rt.Bus, parameters)!;
         }
 
-     
-        return true; // No condition specified, always active
-    }
 
-    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
-    {
-        // Delegate to inner module for static capability information
-        return _inner.GetProposalDefinitions();
+        return true; // No condition specified, always active
     }
 }

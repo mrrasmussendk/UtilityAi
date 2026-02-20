@@ -66,19 +66,6 @@ public sealed class CleanupModule : ICapabilityModule
         );
     }
 
-    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
-    {
-        yield return new ProposalDefinition(
-            ProposalId: "cleanup.old-facts",
-            Description: null,
-            Prior: 1.0,
-            Temperature: 0.0,
-            ConsiderationNames: new[] { nameof(Cooldown<CleanupExecuted>), nameof(ConstantValue) }.ToList(),
-            EligibilityNames: Array.Empty<string>().ToList(),
-            NoRepeat: false,
-            JsonOutput: null
-        );
-    }
 }
 
 /// <summary>
