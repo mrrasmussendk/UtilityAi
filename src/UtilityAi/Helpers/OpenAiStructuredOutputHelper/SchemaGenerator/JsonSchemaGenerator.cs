@@ -9,13 +9,74 @@ namespace UtilityAi.Helpers.OpenAiStructuredOutputHelper.SchemaGenerator;
 
 /// <summary>
 /// Generates a JSON Schema (as JsonNode) for the envelope:
-/// { type: "object", properties: { output: { type:"array", items: [T-schema] }}, required:["output"], additionalProperties:false }
+/// { type: "object", properties: { output: { ... }}, required:["output"], additionalProperties:false }
+/// The output property will be an array if T is a collection type, otherwise a single object.
 /// </summary>
 public static class JsonSchemaGenerator
 {
+    /// <summary>
+    /// Builds a schema that intelligently wraps T in "output" property.
+    /// If T is a collection (List, Array, IEnumerable), output will be an array.
+    /// If T is a single object, output will be that object's schema directly.
+    /// </summary>
+    public static JsonObject BuildOutputSchemaFrom<T>(SchemaGeneratorOptions? options = null)
+        => BuildOutputSchemaFrom(typeof(T), options);
+
+    /// <summary>
+    /// Builds a schema that intelligently wraps T in "output" property.
+    /// If T is a collection (List, Array, IEnumerable), output will be an array.
+    /// If T is a single object, output will be that object's schema directly.
+    /// </summary>
+    public static JsonObject BuildOutputSchemaFrom(Type type, SchemaGeneratorOptions? options = null)
+    {
+        options ??= new SchemaGeneratorOptions();
+
+        // Check if the type is a collection (but not string or dictionary)
+        bool isCollection = IsCollectionType(type, out var elementType);
+
+        JsonObject outputSchema;
+
+        if (isCollection)
+        {
+            // It's a collection - wrap in array
+            var items = BuildItemObjectSchema(elementType!, options);
+            outputSchema = new JsonObject
+            {
+                ["type"] = "array",
+                ["items"] = items
+            };
+        }
+        else
+        {
+            // It's a single object - use its schema directly
+            outputSchema = BuildItemObjectSchema(type, options);
+        }
+
+        return new JsonObject
+        {
+            ["type"] = "object",
+            ["properties"] = new JsonObject
+            {
+                ["output"] = outputSchema
+            },
+            ["required"] = new JsonArray("output"),
+            ["additionalProperties"] = false
+        };
+    }
+
+    /// <summary>
+    /// DEPRECATED: Always wraps in array. Use BuildOutputSchemaFrom instead for intelligent wrapping.
+    /// Generates a JSON Schema for the envelope with output always as an array.
+    /// </summary>
+    [Obsolete("Use BuildOutputSchemaFrom instead - it intelligently decides array vs object based on type")]
     public static JsonObject BuildOutputArraySchemaFrom<T>(SchemaGeneratorOptions? options = null)
         => BuildOutputArraySchemaFrom(typeof(T), options);
 
+    /// <summary>
+    /// DEPRECATED: Always wraps in array. Use BuildOutputSchemaFrom instead for intelligent wrapping.
+    /// Generates a JSON Schema for the envelope with output always as an array.
+    /// </summary>
+    [Obsolete("Use BuildOutputSchemaFrom instead - it intelligently decides array vs object based on type")]
     public static JsonObject BuildOutputArraySchemaFrom(Type itemType, SchemaGeneratorOptions? options = null)
     {
         options ??= new SchemaGeneratorOptions();
@@ -35,6 +96,45 @@ public static class JsonSchemaGenerator
             ["required"] = new JsonArray("output"),
             ["additionalProperties"] = false
         };
+    }
+
+    private static bool IsCollectionType(Type type, out Type? elementType)
+    {
+        elementType = null;
+
+        // String is not a collection for our purposes
+        if (type == typeof(string))
+            return false;
+
+        // Dictionary is not a collection for our purposes (it's an object with additionalProperties)
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+            return false;
+
+        // Check for array
+        if (type.IsArray)
+        {
+            elementType = type.GetElementType();
+            return true;
+        }
+
+        // Check for IEnumerable<T>
+        var iEnumerable = type.GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+
+        if (iEnumerable != null)
+        {
+            elementType = iEnumerable.GetGenericArguments()[0];
+            return true;
+        }
+
+        // Check if type itself is IEnumerable<T>
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+        {
+            elementType = type.GetGenericArguments()[0];
+            return true;
+        }
+
+        return false;
     }
 
     private static JsonObject BuildItemObjectSchema(Type type, SchemaGeneratorOptions options)

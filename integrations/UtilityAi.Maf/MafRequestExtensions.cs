@@ -69,6 +69,9 @@ public static class MafRequestExtensions
 
     /// <summary>
     /// Creates a ChatCompletionOptions with structured output directly from a .NET type.
+    /// Schema intelligently wraps T in "output" property:
+    /// - If T is a collection (List, Array, IEnumerable), output will be an array.
+    /// - If T is a single object, output will be that object directly.
     /// </summary>
     /// <typeparam name="T">The type to generate the schema from</typeparam>
     /// <param name="schemaName">Name for the JSON schema format</param>
@@ -86,7 +89,7 @@ public static class MafRequestExtensions
     {
         CheckTypeForJsonPropertyAttributes<T>();
 
-        var schema = JsonSchemaGenerator.BuildOutputArraySchemaFrom<T>(options);
+        var schema = JsonSchemaGenerator.BuildOutputSchemaFrom<T>(options);
         var schemaBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(schema);
 
         return new ChatCompletionOptions

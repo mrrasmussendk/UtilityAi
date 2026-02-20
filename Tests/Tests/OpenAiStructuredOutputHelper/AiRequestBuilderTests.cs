@@ -57,18 +57,19 @@ public class AiRequestBuilderTests
         Assert.Equal("object", schema["type"]!.GetValue<string>());
         var properties = schema["properties"]!.AsObject();
         var output = properties["output"]!.AsObject();
-        Assert.Equal("array", output["type"]!.GetValue<string>());
 
-        var items = output["items"]!.AsObject();
-        Assert.Equal("object", items["type"]!.GetValue<string>());
-        var itemProps = items["properties"]!.AsObject();
+        // NEW BEHAVIOR: Single object types are no longer wrapped in array
+        Assert.Equal("object", output["type"]!.GetValue<string>());
+
+        // Output is now directly the object (not array with items)
+        var itemProps = output["properties"]!.AsObject();
         Assert.True(itemProps.ContainsKey("name"));
         Assert.True(itemProps.ContainsKey("age"));
         Assert.True(itemProps.ContainsKey("active"));
         Assert.True(itemProps.ContainsKey("tags"));
 
         // Verify required rules: Non-nullable bool and [Required] string should be required
-        var required = items["required"]!.AsArray();
+        var required = output["required"]!.AsArray();
         var requiredSet = new HashSet<string>(required.Select(x => x!.GetValue<string>()));
         Assert.Contains("name", requiredSet);
         Assert.Contains("active", requiredSet);
@@ -91,8 +92,10 @@ public class AiRequestBuilderTests
         using var doc = JsonDocument.Parse(json);
         var format = doc.RootElement.GetProperty("text").GetProperty("format");
         var schema = JsonNode.Parse(format.GetProperty("schema").GetRawText())!.AsObject();
-        var items = schema["properties"]!.AsObject()["output"]!.AsObject()["items"]!.AsObject();
-        var itemProps = items["properties"]!.AsObject();
+
+        // NEW BEHAVIOR: output is now directly the object (not array with items)
+        var output = schema["properties"]!.AsObject()["output"]!.AsObject();
+        var itemProps = output["properties"]!.AsObject();
         var active = itemProps["active"]!.AsObject();
 
         // Assert

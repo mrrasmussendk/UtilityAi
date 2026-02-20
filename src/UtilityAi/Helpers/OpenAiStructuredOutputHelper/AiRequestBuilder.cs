@@ -73,12 +73,14 @@ public sealed class AiRequestBuilder
 
     /// <summary>
     /// Generate a JSON Schema from a .NET type and set it as the "text.format".
-    /// Schema is of the shape: { output: array of T }.
+    /// Schema intelligently wraps T in "output" property:
+    /// - If T is a collection (List, Array, IEnumerable), output will be an array.
+    /// - If T is a single object, output will be that object directly.
     /// </summary>
     public AiRequestBuilder WithJsonSchemaFrom<T>(string name, SchemaGeneratorOptions? options = null, bool strict = true)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(name));
-        var schema = JsonSchemaGenerator.BuildOutputArraySchemaFrom<T>(options);
+        var schema = JsonSchemaGenerator.BuildOutputSchemaFrom<T>(options);
         _format = JsonSchemaFormat.Create(name, schema, strict);
         return this;
     }
