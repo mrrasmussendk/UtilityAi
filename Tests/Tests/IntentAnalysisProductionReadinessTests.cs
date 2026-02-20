@@ -413,14 +413,12 @@ public class IntentAnalysisProductionReadinessTests
             _output.WriteLine($"  ✅ {propName}: {expectedType}");
         }
 
-        // Validate entities and parameters have correct structure (empty object with additionalProperties: false)
+        // Validate entities and parameters have correct structure (object with additionalProperties: true)
         var entities = properties.GetProperty("entities");
-        Assert.False(entities.GetProperty("additionalProperties").GetBoolean());
-        Assert.True(entities.TryGetProperty("properties", out var entitiesProps));
-        Assert.Equal(0, entitiesProps.GetRawText().Length - 2); // Should be "{}"
+        Assert.True(entities.GetProperty("additionalProperties").GetBoolean());
 
         var parameters = properties.GetProperty("parameters");
-        Assert.False(parameters.GetProperty("additionalProperties").GetBoolean());
+        Assert.True(parameters.GetProperty("additionalProperties").GetBoolean());
 
         _output.WriteLine("\n✅ Schema structure validated successfully!");
     }

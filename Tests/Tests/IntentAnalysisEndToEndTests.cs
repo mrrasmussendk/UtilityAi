@@ -53,15 +53,15 @@ public class IntentAnalysisEndToEndTests
 
         var properties = items.GetProperty("properties");
 
-        // Entities should be an object (empty with additionalProperties: false for strict mode compliance)
+        // Entities should be an object with additionalProperties: true to allow dynamic keys
         Assert.True(properties.TryGetProperty("entities", out var entities));
         Assert.Equal("object", entities.GetProperty("type").GetString());
-        Assert.False(entities.GetProperty("additionalProperties").GetBoolean());
+        Assert.True(entities.GetProperty("additionalProperties").GetBoolean());
 
-        // Parameters should be an object (empty with additionalProperties: false for strict mode compliance)
+        // Parameters should be an object with additionalProperties: true to allow dynamic keys
         Assert.True(properties.TryGetProperty("parameters", out var parameters));
         Assert.Equal("object", parameters.GetProperty("type").GetString());
-        Assert.False(parameters.GetProperty("additionalProperties").GetBoolean());
+        Assert.True(parameters.GetProperty("additionalProperties").GetBoolean());
 
         _output.WriteLine("\n✓ Schema structure is correct for OpenAI");
     }
