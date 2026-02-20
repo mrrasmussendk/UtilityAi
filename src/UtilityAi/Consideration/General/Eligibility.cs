@@ -19,8 +19,11 @@ public sealed class NoRepeatEligible(string id) : IEligibility
 {
     public bool IsEligible(Runtime rt)
     {
-        rt.Bus.TryGet<Stack<string>>(out var stack);
-        return stack == null || !stack.Contains(id);
+        if (rt.Bus.TryGet<IReadOnlyList<string>>(out var history) && history is not null)
+        {
+            return !history.Contains(id);
+        }
+        return true;
     }
 
     public string Name { get; } = "NoRepeatEligible";

@@ -24,6 +24,10 @@ public sealed class CollectionSize<T> : IConsideration where T : class
     {
         _sizeSelector = sizeSelector ?? throw new ArgumentNullException(nameof(sizeSelector));
         _curve = curve ?? throw new ArgumentNullException(nameof(curve));
+
+        if (inputDomain.max <= inputDomain.min)
+            throw new ArgumentException("Input domain max must be greater than min.", nameof(inputDomain));
+
         _inputDomain = inputDomain;
     }
 
