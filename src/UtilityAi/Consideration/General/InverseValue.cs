@@ -7,7 +7,7 @@ namespace UtilityAi.Consideration.General;
 /// Useful for representing "lack of" or "opposite of" a property.
 /// </summary>
 /// <typeparam name="T">The type of fact containing the numeric value.</typeparam>
-public sealed class InverseValue<T> : IConsideration where T : class
+public sealed class InverseValue<T> : IConsideration where T : notnull
 {
     private readonly Func<T, double> _selector;
 

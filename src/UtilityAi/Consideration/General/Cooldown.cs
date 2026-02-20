@@ -7,7 +7,7 @@ namespace UtilityAi.Consideration.General;
 /// Returns 0.0 if the cooldown is active, 1.0 if enough time has elapsed.
 /// </summary>
 /// <typeparam name="T">The type of event to track for cooldown.</typeparam>
-public sealed class Cooldown<T> : IConsideration where T : class
+public sealed class Cooldown<T> : IConsideration where T : notnull
 {
     private readonly TimeSpan _cooldownPeriod;
 

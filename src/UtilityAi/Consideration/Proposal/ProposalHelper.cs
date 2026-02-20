@@ -34,6 +34,8 @@ public sealed class ProposalBuilder
 
     internal ProposalBuilder(string id)
     {
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ArgumentException("Proposal id cannot be null or whitespace.", nameof(id));
         _id = id;
     }
 
@@ -168,7 +170,7 @@ public sealed class ProposalBuilder
     public Proposal Build()
     {
         if (_action == null)
-            throw new InvalidOperationException("Action must be set before building proposal");
+            throw new InvalidOperationException($"Cannot build proposal '{_id}': missing required field 'action'.");
 
         // Automatically add eligibility check for intent parameters
         var eligibilities = new List<IEligibility>(_eligibilities);

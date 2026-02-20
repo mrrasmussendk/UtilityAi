@@ -8,7 +8,7 @@ namespace UtilityAi.Consideration.General;
 /// Useful for prioritizing work based on queue length, task count, etc.
 /// </summary>
 /// <typeparam name="T">The type of fact containing the collection.</typeparam>
-public sealed class CollectionSize<T> : IConsideration where T : class
+public sealed class CollectionSize<T> : IConsideration where T : notnull
 {
     private readonly Func<T, int> _sizeSelector;
     private readonly ICurve _curve;
@@ -24,6 +24,10 @@ public sealed class CollectionSize<T> : IConsideration where T : class
     {
         _sizeSelector = sizeSelector ?? throw new ArgumentNullException(nameof(sizeSelector));
         _curve = curve ?? throw new ArgumentNullException(nameof(curve));
+        if (inputDomain.min < 0)
+            throw new ArgumentOutOfRangeException(nameof(inputDomain), "Input domain minimum must be non-negative.");
+        if (inputDomain.max <= inputDomain.min)
+            throw new ArgumentException("Input domain maximum must be greater than minimum.", nameof(inputDomain));
         _inputDomain = inputDomain;
     }
 

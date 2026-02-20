@@ -13,9 +13,17 @@ namespace UtilityAi.Helpers.OpenAiStructuredOutputHelper.SchemaGenerator;
 /// </summary>
 public static class JsonSchemaGenerator
 {
+    internal const string OutputPropertyName = "output";
+
+    /// <summary>
+    /// Builds a schema envelope containing an array under the standard output property.
+    /// </summary>
     public static JsonObject BuildOutputArraySchemaFrom<T>(SchemaGeneratorOptions? options = null)
         => BuildOutputArraySchemaFrom(typeof(T), options);
 
+    /// <summary>
+    /// Builds a schema envelope containing an array under the standard output property.
+    /// </summary>
     public static JsonObject BuildOutputArraySchemaFrom(Type itemType, SchemaGeneratorOptions? options = null)
     {
         options ??= new SchemaGeneratorOptions();
@@ -26,13 +34,13 @@ public static class JsonSchemaGenerator
             ["type"] = "object",
             ["properties"] = new JsonObject
             {
-                ["output"] = new JsonObject
+                [OutputPropertyName] = new JsonObject
                 {
                     ["type"] = "array",
                     ["items"] = items
                 }
             },
-            ["required"] = new JsonArray("output"),
+            ["required"] = new JsonArray(OutputPropertyName),
             ["additionalProperties"] = false
         };
     }
