@@ -13,7 +13,29 @@ public interface IMemoryStore
     /// <param name="fact">The fact instance to store.</param>
     /// <param name="timestamp">When the fact occurred.</param>
     /// <param name="ct">Cancellation token.</param>
+    Task Store<T>(T fact, DateTimeOffset timestamp, CancellationToken ct = default) where T : class
+        => StoreAsync(fact, timestamp, ct);
+
+    /// <summary>
+    /// Stores a fact with timestamp for long-term retention.
+    /// </summary>
+    /// <typeparam name="T">The type of fact to store.</typeparam>
+    /// <param name="fact">The fact instance to store.</param>
+    /// <param name="timestamp">When the fact occurred.</param>
+    /// <param name="ct">Cancellation token.</param>
     Task StoreAsync<T>(T fact, DateTimeOffset timestamp, CancellationToken ct = default) where T : class;
+
+    /// <summary>
+    /// Recalls facts from memory based on a query.
+    /// </summary>
+    /// <typeparam name="T">The type of facts to recall.</typeparam>
+    /// <param name="query">Query parameters for recall.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of matching facts with their timestamps.</returns>
+    Task<IReadOnlyList<TimestampedMemory<T>>> Recall<T>(
+        MemoryQuery query,
+        CancellationToken ct = default) where T : class
+        => RecallAsync<T>(query, ct);
 
     /// <summary>
     /// Recalls facts from memory based on a query.
@@ -31,7 +53,23 @@ public interface IMemoryStore
     /// </summary>
     /// <typeparam name="T">The type of facts to count.</typeparam>
     /// <param name="ct">Cancellation token.</param>
+    Task<int> Count<T>(CancellationToken ct = default) where T : class
+        => CountAsync<T>(ct);
+
+    /// <summary>
+    /// Counts the number of stored facts of a given type.
+    /// </summary>
+    /// <typeparam name="T">The type of facts to count.</typeparam>
+    /// <param name="ct">Cancellation token.</param>
     Task<int> CountAsync<T>(CancellationToken ct = default) where T : class;
+
+    /// <summary>
+    /// Removes old facts beyond a retention period.
+    /// </summary>
+    /// <param name="retentionPeriod">How long to keep facts.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task Prune(TimeSpan retentionPeriod, CancellationToken ct = default)
+        => PruneAsync(retentionPeriod, ct);
 
     /// <summary>
     /// Removes old facts beyond a retention period.
