@@ -171,6 +171,8 @@ yield return ProposalHelper.For("ticket.create.priority")
 
 **Flow:** Proposals declare parameters → Framework exposes metadata via `GetCapabilitiesInfo()` → LLM prompt includes parameter specs → LLM returns structured intent → Proposals score automatically → Best action wins.
 
+**Automatic Validation:** Proposals with `UsesIntentParameter` or `ScoreByIntentParameter` are automatically protected by `HasIntentParametersEligible` — they're only eligible when all declared parameters exist in the `IntentAnalysis.Parameters` dictionary. This prevents proposals from being selected when the LLM hasn't provided the required parameters.
+
 [See the complete Intent-Based Agent example →](./examples/Example/IntentBasedAgent/)
 
 ---

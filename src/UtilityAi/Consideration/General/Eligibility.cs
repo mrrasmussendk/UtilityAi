@@ -50,10 +50,10 @@ public sealed class HasIntentParametersEligible : IEligibility
         if (!rt.Bus.TryGet<IntentAnalysis>(out var intent))
             return false;
 
-        if (intent.Parameters == null)
+        if (intent.Entities == null)
             return false;
 
-        // All required parameters must exist in the Parameters dictionary
-        return _requiredParameters.All(param => intent.Parameters.ContainsKey(param));
+        // All required parameters must exist in the Entities dictionary
+        return _requiredParameters.All(param => intent.Entities.ContainsKey(param));
     }
 }
