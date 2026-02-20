@@ -633,23 +633,21 @@ public class CoordinatorOrchestrator
         _agents["reviewer"] = CreateReviewerAgent(_rootBus.CreateScope("reviewer"));
     }
 
-    public async Task RunAsync(UserIntent intent, CancellationToken ct)
+    public async Task RunAsync(CancellationToken ct)
     {
-        _rootBus.Publish(intent);
-
         // Run agents in sequence or parallel as needed
-        await _agents["researcher"].RunAsync(intent, maxTicks: 5, ct);
+        await _agents["researcher"].RunAsync(maxTicks: 5, ct);
 
         var researchComplete = _rootBus.GetOrDefault<ResearchResults>();
         if (researchComplete != null)
         {
-            await _agents["writer"].RunAsync(intent, maxTicks: 5, ct);
+            await _agents["writer"].RunAsync(maxTicks: 5, ct);
         }
 
         var draftComplete = _rootBus.GetOrDefault<DraftArticle>();
         if (draftComplete != null)
         {
-            await _agents["reviewer"].RunAsync(intent, maxTicks: 3, ct);
+            await _agents["reviewer"].RunAsync(maxTicks: 3, ct);
         }
     }
 
@@ -735,7 +733,7 @@ public class PersistentEventBus
 var persistentBus = new PersistentEventBus("session-123", new RedisStateStore());
 var orchestrator = new UtilityAiOrchestrator(bus: persistentBus.Bus);
 
-await orchestrator.RunAsync(intent, maxTicks: 10, ct);
+await orchestrator.RunAsync(maxTicks: 10, ct);
 await persistentBus.SaveState(); // Persist after each run
 ```
 
@@ -882,7 +880,7 @@ public async Task Orchestrator_ExecutesHighestUtilityProposal()
     var orchestrator = new UtilityAiOrchestrator(bus: bus)
         .AddModule(new TestModule());
 
-    await orchestrator.RunAsync(new UserIntent("test"), maxTicks: 1, CancellationToken.None, sink);
+    await orchestrator.RunAsync(maxTicks: 1, CancellationToken.None, sink);
 
     Assert.Single(sink.ExecutedProposals);
     Assert.Equal("test.action", sink.ExecutedProposals[0]);
@@ -927,7 +925,7 @@ public void Module_ProposesWhenFactExists()
     bus.Publish(new RequiredFact());
 
     var module = new MyModule();
-    var proposals = module.Propose(new Runtime(bus, new UserIntent("test"), 0));
+    var proposals = module.Propose(new Runtime(bus, 0));
 
     Assert.NotEmpty(proposals);
 }

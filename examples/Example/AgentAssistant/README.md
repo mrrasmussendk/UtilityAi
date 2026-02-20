@@ -128,7 +128,7 @@ var orchestrator = new UtilityAiOrchestrator(bus)
     .DiscoverCapabilities(typeof(SendMessageModule).Assembly);
 
 // Run decision loop
-await orchestrator.RunAsync(intent, maxTicks: 5, CancellationToken.None);
+await orchestrator.RunAsync(maxTicks: 5, CancellationToken.None);
 ```
 
 Expected output:

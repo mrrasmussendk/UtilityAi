@@ -106,7 +106,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
 bus.Publish(new UserMessage("Hello!"));
 
 // Run orchestration
-await orchestrator.RunAsync(intent, maxTicks: 5, CancellationToken.None);
+await orchestrator.RunAsync(maxTicks: 5, CancellationToken.None);
 
 // Get response
 var response = bus.GetOrDefault<AssistantMessage>();

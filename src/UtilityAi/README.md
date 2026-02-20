@@ -45,8 +45,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddSensor(new MyEnvironmentSensor())
     .AddModule(new MyCapabilityModule());
 
-var intent = UserIntent.ForGoal("my-goal");
-await orchestrator.RunAsync(intent, maxTicks: 10, CancellationToken.None);
+await orchestrator.RunAsync(maxTicks: 10, CancellationToken.None);
 ```
 
 ### Attribute-Based Registration
