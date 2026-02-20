@@ -61,8 +61,7 @@ public static class IntentBasedAgentExample
         Console.WriteLine("🔍 Registered Capabilities:");
         Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-        var rt = new Runtime(bus, new UserIntent("demo"), 0);
-        var capabilities = orchestrator.GetCapabilitiesInfo(rt);
+        var capabilities = orchestrator.GetCapabilitiesInfo();
 
         foreach (var capability in capabilities)
         {
@@ -218,6 +217,59 @@ public class TicketManagementModule : ICapabilityModule
                 Console.WriteLine("     → SLA: 24 hour response time");
             });
     }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "ticket.create.priority",
+            Description: "Create a high-priority support ticket for urgent issues",
+            Prior: 1.0,
+            Temperature: 0.0,
+            ConsiderationNames: new List<string> { "customer-tier-multiplier" },
+            EligibilityNames: new List<string>(),
+            NoRepeat: false,
+            JsonOutput: null,
+            IntentMatch: new IntentMatchSpec("ticket.create", IntentMatchType.Exact),
+            IntentParameters: new List<IntentParameterUsage>
+            {
+                new IntentParameterUsage("urgency", "number", "How urgent the issue is (0=low, 1=critical)"),
+                new IntentParameterUsage("complexity", "number", "Technical complexity of the issue"),
+                new IntentParameterUsage("customer_tier", "string", "Customer subscription tier", null, new[] { "free", "pro", "enterprise" })
+            }
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "ticket.query",
+            Description: "Find and display existing ticket information",
+            Prior: 1.0,
+            Temperature: 0.0,
+            ConsiderationNames: new List<string> { "has-ticket-id" },
+            EligibilityNames: new List<string>(),
+            NoRepeat: false,
+            JsonOutput: null,
+            IntentMatch: new IntentMatchSpec("ticket.query", IntentMatchType.Exact),
+            IntentParameters: new List<IntentParameterUsage>
+            {
+                new IntentParameterUsage("has_ticket_id", "boolean", "Whether the user provided a ticket ID")
+            }
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "ticket.create.routine",
+            Description: "Create a standard ticket for non-urgent issues",
+            Prior: 0.7,
+            Temperature: 0.0,
+            ConsiderationNames: new List<string>(),
+            EligibilityNames: new List<string>(),
+            NoRepeat: false,
+            JsonOutput: null,
+            IntentMatch: new IntentMatchSpec("ticket.create", IntentMatchType.Exact),
+            IntentParameters: new List<IntentParameterUsage>
+            {
+                new IntentParameterUsage("urgency", "number", "Issue urgency (inverted for routine handling)")
+            }
+        );
+    }
 }
 
 /// <summary>
@@ -258,5 +310,25 @@ public class EscalationModule : ICapabilityModule
                 Console.WriteLine("     → Assigning to available senior agent");
                 Console.WriteLine("     → Customer will receive immediate notification");
             });
+    }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "escalate.human",
+            Description: "Escalate to human agent for complex or sensitive issues",
+            Prior: 0.6,
+            Temperature: 0.0,
+            ConsiderationNames: new List<string> { "requires-human" },
+            EligibilityNames: new List<string>(),
+            NoRepeat: false,
+            JsonOutput: null,
+            IntentMatch: new IntentMatchSpec("ticket.*", IntentMatchType.Prefix),
+            IntentParameters: new List<IntentParameterUsage>
+            {
+                new IntentParameterUsage("urgency", "number", "Escalates when urgency exceeds 0.9"),
+                new IntentParameterUsage("requires_human", "boolean", "Whether the issue explicitly needs human judgment")
+            }
+        );
     }
 }

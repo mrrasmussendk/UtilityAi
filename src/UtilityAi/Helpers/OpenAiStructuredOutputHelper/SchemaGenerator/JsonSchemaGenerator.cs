@@ -142,11 +142,15 @@ public static class JsonSchemaGenerator
         var (nestedProps, nestedReq) =
             BuildObjectProperties(effective, RequiredStrategy.NonNullableValueTypesAndRequiredAttribute);
 
+        // Ensure all properties are in required array if properties exist
+        var allPropKeys = nestedProps.Select(p => p.Key).ToList();
+        var finalRequired = nestedReq.Any() ? nestedReq : allPropKeys;
+
         return (new JsonObject
         {
             ["type"] = "object",
             ["properties"] = nestedProps,
-            ["required"] = new JsonArray(nestedReq.Select(r => (JsonNode) r).ToArray()),
+            ["required"] = new JsonArray(finalRequired.Select(r => (JsonNode) r).ToArray()),
             ["additionalProperties"] = false
         }, !isNullableValue && effective.IsValueType);
     }

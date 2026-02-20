@@ -1,5 +1,6 @@
 using System.Reflection;
 using UtilityAi.Consideration;
+using UtilityAi.Orchestration;
 using UtilityAi.Utils;
 
 namespace UtilityAi.Capabilities;
@@ -92,5 +93,11 @@ internal sealed class CapabilityFilterWrapper : ICapabilityModule
         }
 
         return true; // No condition specified, always active
+    }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        // Delegate to inner module for static capability information
+        return _inner.GetProposalDefinitions();
     }
 }

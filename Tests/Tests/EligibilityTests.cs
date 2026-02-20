@@ -16,6 +16,23 @@ public class EligibilityTests
     private sealed class NoopModule(params Proposal[] proposals) : ICapabilityModule
     {
         public IEnumerable<Proposal> Propose(Runtime rt) => proposals;
+
+        public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+        {
+            foreach (var proposal in proposals)
+            {
+                yield return new ProposalDefinition(
+                    ProposalId: proposal.Id,
+                    Description: null,
+                    Prior: 1.0,
+                    Temperature: 0.0,
+                    ConsiderationNames: proposal.Considerations.Select(c => c.Name).ToList(),
+                    EligibilityNames: proposal.Eligibilities.Select(e => e.Name).ToList(),
+                    NoRepeat: false,
+                    JsonOutput: null
+                );
+            }
+        }
     }
 
     [Fact]

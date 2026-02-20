@@ -1,6 +1,7 @@
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
 using UtilityAi.Consideration.General;
+using UtilityAi.Orchestration;
 using UtilityAi.Utils;
 
 namespace Example.AgentAssistant.Modules;
@@ -67,5 +68,41 @@ public sealed class FallbackResponseModule : ICapabilityModule
                 // Note: Don't publish AssistantResponse - this indicates a problem
             })
             .Build();
+    }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "fallback.no_research",
+            Description: null,
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "research_needed_but_missing" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "fallback.low_confidence",
+            Description: null,
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "very_low_confidence" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "fallback.emergency",
+            Description: null,
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "last_resort" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
     }
 }

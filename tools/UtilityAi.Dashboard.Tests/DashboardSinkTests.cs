@@ -97,5 +97,19 @@ public class DashboardSinkTests
                 Array.Empty<IConsideration>(),
                 _ => Task.CompletedTask);
         }
+
+        public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+        {
+            yield return new ProposalDefinition(
+                ProposalId: "test.action",
+                Description: null,
+                Prior: 1.0,
+                Temperature: 1.0,
+                ConsiderationNames: Array.Empty<string>(),
+                EligibilityNames: Array.Empty<string>(),
+                NoRepeat: false,
+                JsonOutput: null
+            );
+        }
     }
 }

@@ -115,4 +115,40 @@ public sealed class SendMessageModule : ICapabilityModule
             })
             .Build();
     }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "message.direct",
+            Description: "Send a direct, confident response to the user",
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "confidence", "ready_to_respond" },
+            EligibilityNames: new[] { "NotHasFact<AssistantResponse>" },
+            NoRepeat: false,
+            JsonOutput: null
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "message.clarify",
+            Description: "Ask for clarification when query is ambiguous",
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "ambiguity", "no_research_option" },
+            EligibilityNames: new[] { "NotHasFact<AssistantResponse>" },
+            NoRepeat: false,
+            JsonOutput: null
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "message.acknowledge",
+            Description: "Acknowledge query and indicate research is in progress",
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "needs_research", "moderate_confidence", "not_already_acknowledged" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
+    }
 }

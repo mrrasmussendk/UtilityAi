@@ -1,6 +1,7 @@
 using UtilityAi.Consideration;
 using UtilityAi.Consideration.General;
 using UtilityAi.Facts;
+using UtilityAi.Orchestration;
 using UtilityAi.Orchestration.Events;
 using UtilityAi.Utils;
 
@@ -34,6 +35,20 @@ public sealed class StopOnSignalModule : ICapabilityModule
                     stopSignal.Reason));
                 return Task.CompletedTask;
             }
+        );
+    }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "stop.on-signal",
+            Description: null,
+            Prior: 1.0,
+            Temperature: 0.0,
+            ConsiderationNames: new[] { nameof(HasFact<StopSignal>), nameof(ConstantValue) }.ToList(),
+            EligibilityNames: Array.Empty<string>().ToList(),
+            NoRepeat: false,
+            JsonOutput: null
         );
     }
 }

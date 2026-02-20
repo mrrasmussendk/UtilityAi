@@ -1,6 +1,7 @@
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
 using UtilityAi.Consideration.General;
+using UtilityAi.Orchestration;
 using UtilityAi.Utils;
 
 namespace Example.AgentAssistant.Modules;
@@ -118,6 +119,42 @@ public sealed class DoResearchModule : ICapabilityModule
                 Console.WriteLine($"    ✅ Embedded knowledge retrieved");
             })
             .Build();
+    }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "research.web",
+            Description: "Search the web for current, factual information",
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "needs_research", "web_available", "rate_limit" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "research.database",
+            Description: "Query internal database for structured information",
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "needs_research", "database_available", "preference_for_structured" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "research.embedded",
+            Description: "Use embedded knowledge as fallback when external sources unavailable",
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "needs_research", "external_unavailable" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
     }
 }
 

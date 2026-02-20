@@ -179,10 +179,8 @@ public class IntentParametersTests
         var orchestrator = new UtilityAiOrchestrator(bus: bus)
             .AddModule(new TestIntentModule());
 
-        var rt = new Runtime(bus, new UserIntent("test"), 0);
-
         // Act
-        var capabilities = orchestrator.GetCapabilitiesInfo(rt);
+        var capabilities = orchestrator.GetCapabilitiesInfo();
 
         // Assert
         Assert.Single(capabilities);
@@ -291,5 +289,42 @@ file class TestIntentModule : ICapabilityModule
                 x => x,
                 (0, 1)))
             .WithAction(async ct => await Task.CompletedTask);
+    }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        // Return static metadata matching the proposals above
+        yield return new ProposalDefinition(
+            ProposalId: "ticket.create",
+            Description: "Create a new support ticket",
+            Prior: 1.0,
+            Temperature: 0.0,
+            ConsiderationNames: new List<string> { "customer-tier-bonus" },
+            EligibilityNames: new List<string>(),
+            NoRepeat: false,
+            JsonOutput: null,
+            IntentMatch: new IntentMatchSpec("ticket.create", IntentMatchType.Exact),
+            IntentParameters: new List<IntentParameterUsage>
+            {
+                new IntentParameterUsage("urgency", "number", "Ticket urgency"),
+                new IntentParameterUsage("customer_tier", "string", null, null, new[] { "free", "premium", "enterprise" })
+            }
+        );
+
+        yield return new ProposalDefinition(
+            ProposalId: "ticket.query",
+            Description: "Query existing ticket",
+            Prior: 1.0,
+            Temperature: 0.0,
+            ConsiderationNames: new List<string> { "has-ticket-id" },
+            EligibilityNames: new List<string>(),
+            NoRepeat: false,
+            JsonOutput: null,
+            IntentMatch: new IntentMatchSpec("ticket.query", IntentMatchType.Exact),
+            IntentParameters: new List<IntentParameterUsage>
+            {
+                new IntentParameterUsage("has_ticket_id", "boolean", "Whether user provided ticket ID")
+            }
+        );
     }
 }

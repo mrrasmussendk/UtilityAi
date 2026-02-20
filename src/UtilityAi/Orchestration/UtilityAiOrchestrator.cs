@@ -224,28 +224,28 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     /// <summary>
     /// Introspects all registered capability modules and returns metadata about their potential actions.
     /// Useful for planning, LLM context building, and debugging.
+    /// This method does not require a runtime context and returns static capability information.
     /// </summary>
-    /// <param name="rt">The runtime context to use when calling Propose on each module.</param>
     /// <returns>A list of capability information including all proposals each module can generate.</returns>
-    public IReadOnlyList<CapabilityInfo> GetCapabilitiesInfo(Runtime rt)
+    public IReadOnlyList<CapabilityInfo> GetCapabilitiesInfo()
     {
         return _modules.Select(module =>
         {
             var moduleName = module.GetType().Name;
             var moduleTypeName = module.GetType().FullName ?? moduleName;
 
-            // Call Propose to get all potential actions this module can generate
-            var proposals = module.Propose(rt).Select(p => new ProposalInfo(
-                ProposalId: p.Id,
-                Description: p.Description,
-                Prior: p.Prior,
-                Temperature: p.Temperature,
-                ConsiderationNames: p.Considerations.Select(c => c.Name).ToList(),
-                EligibilityNames: p.Eligibilities.Select(e => e.GetType().Name).ToList(),
-                NoRepeat: p.NoRepeat,
-                JsonOutput: p.JsonOutput,
-                IntentMatch: p.IntentMatch,
-                IntentParameters: p.IntentParameters
+            // Call GetProposalDefinitions to get static metadata about proposals
+            var proposals = module.GetProposalDefinitions().Select(def => new ProposalInfo(
+                ProposalId: def.ProposalId,
+                Description: def.Description,
+                Prior: def.Prior,
+                Temperature: def.Temperature,
+                ConsiderationNames: def.ConsiderationNames,
+                EligibilityNames: def.EligibilityNames,
+                NoRepeat: def.NoRepeat,
+                JsonOutput: def.JsonOutput,
+                IntentMatch: def.IntentMatch,
+                IntentParameters: def.IntentParameters
             )).ToList();
 
             return new CapabilityInfo(moduleName, moduleTypeName, proposals);

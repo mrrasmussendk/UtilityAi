@@ -1,5 +1,6 @@
 using UtilityAi.Consideration;
 using UtilityAi.Consideration.General;
+using UtilityAi.Orchestration;
 using UtilityAi.Utils;
 
 namespace UtilityAi.Capabilities.BuiltIn;
@@ -32,6 +33,20 @@ public sealed class IdleModule : ICapabilityModule
                 new ConstantValue(_idleUtility)
             },
             act: _ => Task.CompletedTask
+        );
+    }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "idle",
+            Description: null,
+            Prior: 1.0,
+            Temperature: 0.0,
+            ConsiderationNames: new[] { nameof(ConstantValue) }.ToList(),
+            EligibilityNames: Array.Empty<string>().ToList(),
+            NoRepeat: false,
+            JsonOutput: null
         );
     }
 }

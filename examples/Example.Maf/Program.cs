@@ -120,6 +120,20 @@ file sealed class MyModule : ICapabilityModule
             }
         );
     }
+
+    public IEnumerable<ProposalDefinition> GetProposalDefinitions()
+    {
+        yield return new ProposalDefinition(
+            ProposalId: "research-answer",
+            Description: null,
+            Prior: 1.0,
+            Temperature: 1.0,
+            ConsiderationNames: new[] { "always-available" },
+            EligibilityNames: Array.Empty<string>(),
+            NoRepeat: false,
+            JsonOutput: null
+        );
+    }
 }
 
 file sealed class ConstantConsideration : IConsideration

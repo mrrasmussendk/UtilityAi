@@ -1,6 +1,7 @@
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
 using UtilityAi.Consideration.General;
+using UtilityAi.Orchestration;
 using UtilityAi.Utils;
 
 namespace UtilityAi.LLM.Abstractions;
@@ -21,6 +22,8 @@ public abstract class LlmCapabilityModule : ICapabilityModule
     }
 
     public abstract IEnumerable<Proposal> Propose(Runtime rt);
+
+    public abstract IEnumerable<ProposalDefinition> GetProposalDefinitions();
 
     /// <summary>
     /// Builds conversation history from EventBus for a specific message type.

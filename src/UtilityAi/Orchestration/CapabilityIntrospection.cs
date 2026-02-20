@@ -27,3 +27,20 @@ public sealed record ProposalInfo(
     IntentMatchSpec? IntentMatch = null,
     IReadOnlyList<IntentParameterUsage>? IntentParameters = null
 );
+
+/// <summary>
+/// Static metadata about a proposal that a module can generate, independent of runtime state.
+/// Used for capability introspection without requiring a Runtime instance.
+/// </summary>
+public sealed record ProposalDefinition(
+    string ProposalId,
+    string? Description,
+    double Prior,
+    double Temperature,
+    IReadOnlyList<string> ConsiderationNames,
+    IReadOnlyList<string> EligibilityNames,
+    bool NoRepeat,
+    string? JsonOutput,
+    IntentMatchSpec? IntentMatch = null,
+    IReadOnlyList<IntentParameterUsage>? IntentParameters = null
+);
