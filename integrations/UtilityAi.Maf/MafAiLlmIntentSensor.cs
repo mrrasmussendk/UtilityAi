@@ -120,22 +120,42 @@ public sealed class MafAiLlmIntentSensor : ISensor
             var snapshot = rt.Bus.GetOrDefault<CapabilitiesSnapshot>();
             if (snapshot != null)
             {
-                sb.AppendLine("## Available Capabilities");
+                sb.AppendLine("## Available System Actions");
+                sb.AppendLine("Extract entities based on these available actions and their required parameters:");
+                sb.AppendLine();
                 foreach (var capability in snapshot.Capabilities)
                 {
                     foreach (var action in capability.PotentialActions)
                     {
-                        sb.AppendLine($"- {action.ProposalId}: {action.Description ?? "No description"}");
+                        sb.AppendLine($"### {action.ProposalId}");
+                        sb.AppendLine($"Description: {action.Description ?? "No description"}");
+
+                        // Include parameters if available
+                        if (action.IntentParameters != null && action.IntentParameters.Count > 0)
+                        {
+                            sb.AppendLine("Required entities:");
+                            foreach (var param in action.IntentParameters)
+                            {
+                                var paramDesc = param.Description ?? param.Type;
+                                sb.AppendLine($"  - {param.ParameterName}: {paramDesc}");
+                            }
+                        }
+                        sb.AppendLine();
                     }
                 }
-                sb.AppendLine();
             }
         }
 
+        sb.AppendLine("## Instructions");
+        sb.AppendLine("1. Identify the user's primary intent");
+        sb.AppendLine("2. Extract entities that match the parameters required by relevant system actions");
+        sb.AppendLine("3. Use entity keys that correspond to action parameters (not generic keys like 'country', 'unit')");
+        sb.AppendLine("4. If no system action matches, extract general semantic entities");
+        sb.AppendLine();
         sb.AppendLine("## Output Format");
         sb.AppendLine("Respond with JSON containing:");
         sb.AppendLine("- `intent`: Primary user intent/goal (string)");
-        sb.AppendLine("- `entities`: Key-value pairs of extracted entities (object)");
+        sb.AppendLine("- `entities`: Key-value pairs matching action parameters (object)");
         sb.AppendLine("- `confidence`: Confidence in the analysis 0.0-1.0 (number)");
 
         return sb.ToString();
