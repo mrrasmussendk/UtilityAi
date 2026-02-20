@@ -1,3 +1,4 @@
+using UtilityAi.Facts;
 using UtilityAi.Sensor.LLM;
 using UtilityAi.Utils;
 
@@ -72,22 +73,123 @@ public sealed class LlmIntentSensorTests
     }
 
     [Fact]
-    public async Task SenseAsync_SkipsIfAlreadyAnalyzed()
+    public async Task SenseAsync_SkipsIfAlreadyAnalyzedSameContext()
     {
         // Arrange
         var bus = new EventBus();
         bus.Publish(new UserMessage("Test"));
-        bus.Publish(new IntentAnalysis("existing", new Dictionary<string, System.Text.Json.JsonElement>(), 1.0));
 
-        var mockLlm = new MockLlmClient("{}");
+        var llmResponse = @"{
+            ""intent"": ""test.action"",
+            ""entities"": {},
+            ""confidence"": 1.0
+        }";
+
+        var mockLlm = new MockLlmClient(llmResponse);
         var sensor = LlmIntentSensor.ForMessageType<UserMessage>(mockLlm, msg => msg.Text);
-        var rt = new Runtime(bus,  1);
+        var rt = new Runtime(bus, 1);
 
-        // Act
+        // Act - First analysis
+        await sensor.SenseAsync(rt, CancellationToken.None);
+        Assert.Equal(1, mockLlm.CallCount);
+
+        // Act - Second call with same context
         await sensor.SenseAsync(rt, CancellationToken.None);
 
-        // Assert - Should not call LLM
-        Assert.Equal(0, mockLlm.CallCount);
+        // Assert - Should not call LLM again (same context hash)
+        Assert.Equal(1, mockLlm.CallCount);
+    }
+
+    [Fact]
+    public async Task SenseAsync_ReanalyzesAfterActionsExecute()
+    {
+        // Arrange
+        var bus = new EventBus();
+        var userMsg = new UserMessage("Research Denmark");
+        bus.Publish(userMsg);
+
+        var llmResponse = @"{
+            ""intent"": ""research"",
+            ""entities"": {},
+            ""confidence"": 1.0
+        }";
+
+        var mockLlm = new MockLlmClient(llmResponse);
+        
+        // Sensor configured to reanalyze after actions
+        var sensor = LlmIntentSensor.ForMessageType<UserMessage>(
+            mockLlm,
+            msg => msg.Text,
+            includeCapabilities: false,
+            reanalyzeAfterActions: true
+        );
+        
+        var rt = new Runtime(bus, 1);
+
+        // Act - First analysis (no actions executed yet)
+        await sensor.SenseAsync(rt, CancellationToken.None);
+        Assert.Equal(1, mockLlm.CallCount);
+
+        // Simulate action execution by publishing ExecutionHistory
+        var executedAction = new ExecutedAction(
+            ProposalId: "research.web",
+            Description: "Search the web",
+            TickNumber: 1,
+            Timestamp: DateTimeOffset.UtcNow
+        );
+        bus.Publish(new ExecutionHistory(new[] { executedAction }));
+
+        // Act - Second analysis (after action executed)
+        await sensor.SenseAsync(rt, CancellationToken.None);
+
+        // Assert - Should call LLM again (new action executed)
+        Assert.Equal(2, mockLlm.CallCount);
+    }
+
+    [Fact]
+    public async Task SenseAsync_DoesNotReanalyzeWithoutFlag()
+    {
+        // Arrange
+        var bus = new EventBus();
+        var userMsg = new UserMessage("Research Denmark");
+        bus.Publish(userMsg);
+
+        var llmResponse = @"{
+            ""intent"": ""research"",
+            ""entities"": {},
+            ""confidence"": 1.0
+        }";
+
+        var mockLlm = new MockLlmClient(llmResponse);
+        
+        // Sensor NOT configured to reanalyze (default behavior)
+        var sensor = LlmIntentSensor.ForMessageType<UserMessage>(
+            mockLlm,
+            msg => msg.Text,
+            includeCapabilities: false,
+            reanalyzeAfterActions: false  // Explicit false
+        );
+        
+        var rt = new Runtime(bus, 1);
+
+        // Act - First analysis
+        await sensor.SenseAsync(rt, CancellationToken.None);
+        Assert.Equal(1, mockLlm.CallCount);
+
+        // Simulate action execution
+        var executedAction = new ExecutedAction(
+            ProposalId: "research.web",
+            Description: "Search the web",
+            TickNumber: 1,
+            Timestamp: DateTimeOffset.UtcNow
+        );
+        bus.Publish(new ExecutionHistory(new[] { executedAction }));
+
+        // Act - Second call (after action executed)
+        await sensor.SenseAsync(rt, CancellationToken.None);
+
+        // Assert - Should NOT call LLM again (reanalyzeAfterActions=false)
+        Assert.Equal(1, mockLlm.CallCount);
     }
 
     [Fact]

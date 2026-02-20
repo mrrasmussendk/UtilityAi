@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using UtilityAi.Facts;
 using UtilityAi.Orchestration;
 using UtilityAi.Utils;
 
@@ -10,6 +11,22 @@ namespace UtilityAi.Sensor.LLM;
 /// Sensor that uses an LLM to analyze user messages and publish structured facts to EventBus.
 /// The LLM interprets intent and extracts entities - it does NOT pick actions.
 /// The utility system then reacts naturally to these published facts.
+/// 
+/// Re-analysis behavior:
+/// - By default, analyzes once per message and never again (backward compatible)
+/// - With reanalyzeAfterActions=true, re-analyzes after each action execution
+/// - Uses ExecutionHistory on the bus to detect when new actions have run
+/// - Example: After research completes, LLM determines next step (summarize, search again, etc.)
+/// 
+/// Example with re-analysis:
+/// <code>
+/// var sensor = LlmIntentSensor.ForMessageType&lt;UserMessage&gt;(
+///     llm: myLlmClient,
+///     messageExtractor: msg => msg.Text,
+///     includeCapabilities: true,
+///     reanalyzeAfterActions: true
+/// );
+/// </code>
 /// </summary>
 public sealed class LlmIntentSensor : ISensor
 {
@@ -17,6 +34,7 @@ public sealed class LlmIntentSensor : ISensor
     private readonly Type _messageType;
     private readonly Func<object, string> _messageExtractor;
     private readonly bool _includeCapabilities;
+    private readonly bool _reanalyzeAfterActions;
 
     /// <summary>
     /// Creates an intent analysis sensor.
@@ -25,16 +43,19 @@ public sealed class LlmIntentSensor : ISensor
     /// <param name="messageType">Type of message fact to analyze (e.g., UserMessage).</param>
     /// <param name="messageExtractor">Function to extract text from the message object.</param>
     /// <param name="includeCapabilities">If true, includes available actions in LLM context for better intent understanding.</param>
+    /// <param name="reanalyzeAfterActions">If true, re-analyzes intent after actions execute to determine next steps based on results. Default is false for backward compatibility.</param>
     public LlmIntentSensor(
         ILlmClient llm,
         Type messageType,
         Func<object, string> messageExtractor,
-        bool includeCapabilities = false)
+        bool includeCapabilities = false,
+        bool reanalyzeAfterActions = false)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _messageType = messageType ?? throw new ArgumentNullException(nameof(messageType));
         _messageExtractor = messageExtractor ?? throw new ArgumentNullException(nameof(messageExtractor));
         _includeCapabilities = includeCapabilities;
+        _reanalyzeAfterActions = reanalyzeAfterActions;
     }
 
     /// <summary>
@@ -43,22 +64,20 @@ public sealed class LlmIntentSensor : ISensor
     public static LlmIntentSensor ForMessageType<T>(
         ILlmClient llm,
         Func<T, string> messageExtractor,
-        bool includeCapabilities = false) where T : class
+        bool includeCapabilities = false,
+        bool reanalyzeAfterActions = false) where T : class
     {
         return new LlmIntentSensor(
             llm,
             typeof(T),
             obj => messageExtractor((T)obj),
-            includeCapabilities
+            includeCapabilities,
+            reanalyzeAfterActions
         );
     }
 
     public async Task SenseAsync(Runtime rt, CancellationToken ct)
     {
-        // Check if we've already analyzed this message
-        var existingAnalysis = rt.Bus.GetOrDefault<IntentAnalysis>();
-        if (existingAnalysis != null) return;  // Already analyzed
-
         // Get the message to analyze using reflection
         var getMethod = typeof(EventBus).GetMethod(nameof(EventBus.GetOrDefault))!
             .MakeGenericMethod(_messageType);
@@ -68,7 +87,10 @@ public sealed class LlmIntentSensor : ISensor
         var messageText = _messageExtractor(message);
         if (string.IsNullOrWhiteSpace(messageText)) return;
 
-        // Build prompt
+        // Check if we should re-analyze based on execution history
+        if (!ShouldAnalyze(rt.Bus)) return;
+
+        // Build prompt with full context
         var prompt = BuildPrompt(messageText, rt);
 
         // Call LLM
@@ -77,6 +99,29 @@ public sealed class LlmIntentSensor : ISensor
         // Parse and publish facts
         var analysis = ParseAnalysis(response);
         rt.Bus.Publish(analysis);
+        
+        // Track what we've analyzed
+        var executionHistory = rt.Bus.GetOrDefault<ExecutionHistory>();
+        var actionCount = executionHistory?.Actions.Count ?? 0;
+        rt.Bus.Publish(new LastIntentAnalysisContext(actionCount));
+    }
+
+    private bool ShouldAnalyze(EventBus bus)
+    {
+        var lastContext = bus.GetOrDefault<LastIntentAnalysisContext>();
+        
+        // First time analyzing - always proceed
+        if (lastContext == null) return true;
+        
+        // If reanalyzeAfterActions is false, only analyze once
+        if (!_reanalyzeAfterActions) return false;
+        
+        // Check if new actions have executed since last analysis
+        var executionHistory = bus.GetOrDefault<ExecutionHistory>();
+        var currentActionCount = executionHistory?.Actions.Count ?? 0;
+        
+        // Re-analyze if action count has changed (new actions executed)
+        return currentActionCount > lastContext.ActionCount;
     }
 
     private string BuildPrompt(string messageText, Runtime rt)
@@ -287,3 +332,10 @@ public sealed record IntentAnalysis(
         return GetParameter<double>(name, double.MaxValue) < threshold;
     }
 };
+
+/// <summary>
+/// Internal fact tracking when LlmIntentSensor last analyzed intent.
+/// Stores the action count from ExecutionHistory at the time of analysis.
+/// Used to detect when new actions have executed and re-analysis should occur.
+/// </summary>
+internal sealed record LastIntentAnalysisContext(int ActionCount);
