@@ -1,5 +1,7 @@
 using System.Runtime.CompilerServices;
+using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Nodes;
 using Azure.AI.Projects.OpenAI;
 using Microsoft.Agents.AI;
@@ -18,6 +20,18 @@ namespace Tests;
 /// </summary>
 public class MafIntegrationTests
 {
+    [JsonConverter(typeof(AlwaysThrowingConverter))]
+    private sealed class AlwaysThrowingType;
+
+    private sealed class AlwaysThrowingConverter : JsonConverter<AlwaysThrowingType>
+    {
+        public override AlwaysThrowingType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            throw new InvalidOperationException("converter failure");
+
+        public override void Write(Utf8JsonWriter writer, AlwaysThrowingType value, JsonSerializerOptions options) =>
+            throw new NotSupportedException();
+    }
+
     // ─── MafClient ────────────────────────────────────────────────
 
 
@@ -117,6 +131,18 @@ public class MafIntegrationTests
         Assert.NotNull(strictOptions);
         Assert.NotNull(nonStrictOptions);
         // Note: ResponseFormat doesn't expose strict property directly, but we verify it doesn't throw
+    }
+
+    [Fact]
+    public void FindDeserializableElement_DoesNotSwallowNonJsonExceptions()
+    {
+        using var doc = JsonDocument.Parse(@"{""output"":{""value"":1}}");
+        var method = typeof(MafRequestExtensions)
+            .GetMethod("FindDeserializableElement", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .MakeGenericMethod(typeof(AlwaysThrowingType));
+
+        var exception = Assert.Throws<TargetInvocationException>(() => method.Invoke(null, new object[] { doc.RootElement, "output" }));
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
     }
 
     [Fact]

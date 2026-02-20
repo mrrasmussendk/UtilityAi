@@ -218,8 +218,7 @@ public sealed record IntentAnalysis(
     /// </summary>
     public T? GetParameter<T>(string name, T? defaultValue = default)
     {
-        // Check Entities first (new approach), then fall back to Parameters (deprecated)
-        if (Entities?.TryGetValue(name, out var element) == true)
+        if (TryGetParameterElement(name, out var element))
         {
             try
             {
@@ -230,23 +229,22 @@ public sealed record IntentAnalysis(
                 return defaultValue;
             }
         }
-        
-        // Fallback for backward compatibility
-        #pragma warning disable CS0618 // Type or member is obsolete
-        if (Parameters?.TryGetValue(name, out var paramElement) == true)
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<T>(paramElement);
-            }
-            catch
-            {
-                return defaultValue;
-            }
-        }
-        #pragma warning restore CS0618
-        
+
         return defaultValue;
+    }
+
+    private bool TryGetParameterElement(string name, out JsonElement element)
+    {
+        if (Entities?.TryGetValue(name, out element) == true)
+            return true;
+
+        #pragma warning disable CS0618 // Type or member is obsolete
+        if (Parameters?.TryGetValue(name, out element) == true)
+            return true;
+        #pragma warning restore CS0618
+
+        element = default;
+        return false;
     }
 
     /// <summary>
@@ -289,4 +287,3 @@ public sealed record IntentAnalysis(
         return GetParameter<double>(name, double.MaxValue) < threshold;
     }
 };
-

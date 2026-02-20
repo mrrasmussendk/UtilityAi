@@ -228,7 +228,9 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
         IOrchestrationSink sink, bool stopAtZero)
     {
         var chosen = _selector.Select(scored.Select(x => (x.p, x.u)).ToList(), rt);
-        var match = scored.FirstOrDefault(x => ReferenceEquals(x.p, chosen));
+        var match = scored.FirstOrDefault(x =>
+            ReferenceEquals(x.p, chosen) ||
+            string.Equals(x.p.Id, chosen.Id, StringComparison.Ordinal));
 
         // If chosen proposal is not found in scored list, this indicates a selector bug
         if (match.p == null)
@@ -236,6 +238,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
             throw new InvalidOperationException("Selection strategy returned a proposal not in the scored list.");
         }
 
+        var chosenProposal = match.p;
         var chosenUtility = match.u;
 
         // Note: We use a small epsilon check because Proposal.Utility uses 1e-6 as a floor for considerations.
@@ -246,8 +249,8 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
             return null;
         }
 
-        sink.OnChosen(rt, chosen, chosenUtility);
-        return (chosen, chosenUtility);
+        sink.OnChosen(rt, chosenProposal, chosenUtility);
+        return (chosenProposal, chosenUtility);
     }
 
     private static async Task ActAndNotify(Proposal chosen, Runtime rt, IOrchestrationSink sink, CancellationToken ct)

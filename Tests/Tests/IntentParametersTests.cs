@@ -52,6 +52,32 @@ public class IntentParametersTests
     }
 
     [Fact]
+    public void IntentAnalysis_GetParameter_PrefersEntitiesOverObsoleteParameters()
+    {
+        using var entitiesUrgencyDoc = System.Text.Json.JsonDocument.Parse("0.85");
+        using var parametersUrgencyDoc = System.Text.Json.JsonDocument.Parse("0.15");
+        var entities = new Dictionary<string, System.Text.Json.JsonElement>
+        {
+            ["urgency"] = entitiesUrgencyDoc.RootElement.Clone()
+        };
+        var parameters = new Dictionary<string, System.Text.Json.JsonElement>
+        {
+            ["urgency"] = parametersUrgencyDoc.RootElement.Clone()
+        };
+
+        #pragma warning disable CS0618
+        var intent = new IntentAnalysis(
+            Intent: "test",
+            Entities: entities,
+            Confidence: 0.9,
+            Parameters: parameters
+        );
+        #pragma warning restore CS0618
+
+        Assert.Equal(0.85, intent.GetParameter("urgency", 0.5));
+    }
+
+    [Fact]
     public void IntentAnalysis_ParameterAbove_WorksCorrectly()
     {
         // Arrange
