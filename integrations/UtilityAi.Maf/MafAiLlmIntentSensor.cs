@@ -93,7 +93,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         var completion = AiRequestBuilder.Create()
             .WithModel(_model)
             .AddUser(prompt)
-            .WithJsonSchemaFrom<IntentAnalysis>("intent", _schemaOptions)
+            .WithJsonSchemaFrom<IntentAnalysis>("intent", _schemaOptions, strict:false)
             .CompleteAndDeserialize<IntentAnalysis>(_chatClient);
 
 

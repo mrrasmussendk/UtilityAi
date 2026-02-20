@@ -207,7 +207,7 @@ public sealed class LlmIntentSensor : ISensor
 /// </summary>
 public sealed record IntentAnalysis(
     [property: JsonPropertyName("intent")] string Intent,
-    [property: JsonPropertyName("entities")] Dictionary<string, JsonElement> Entities,
+    [property: JsonPropertyName("entities")] Dictionary<string, JsonElement>? Entities,
     [property: JsonPropertyName("confidence")] double Confidence,
     [property: JsonPropertyName("parameters")] Dictionary<string, JsonElement>? Parameters = null
 )
@@ -238,7 +238,7 @@ public sealed record IntentAnalysis(
     /// </summary>
     public T? GetEntity<T>(string name, T? defaultValue = default)
     {
-        if (Entities.TryGetValue(name, out var element))
+        if (Entities?.TryGetValue(name, out var element) == true)
         {
             try
             {
