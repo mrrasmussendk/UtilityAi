@@ -1,0 +1,25 @@
+<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+
+	<!-- Code Coverage Settings -->
+	<!-- Include only main library assemblies -->
+	<s:String x:Key="/Default/FilterSettingsManager/CoverageFilterXml/@EntryValue">
+		&lt;data&gt;
+			&lt;IncludeFilters&gt;
+				&lt;Filter ModuleMask="UtilityAi" ModuleVersionMask="*" ClassMask="*" FunctionMask="*" IsEnabled="True" /&gt;
+				&lt;Filter ModuleMask="UtilityAi.Maf" ModuleVersionMask="*" ClassMask="*" FunctionMask="*" IsEnabled="True" /&gt;
+			&lt;/IncludeFilters&gt;
+			&lt;ExcludeFilters&gt;
+				&lt;Filter ModuleMask="*Tests" ModuleVersionMask="*" ClassMask="*" FunctionMask="*" IsEnabled="True" /&gt;
+				&lt;Filter ModuleMask="*.Tests" ModuleVersionMask="*" ClassMask="*" FunctionMask="*" IsEnabled="True" /&gt;
+				&lt;Filter ModuleMask="Example" ModuleVersionMask="*" ClassMask="*" FunctionMask="*" IsEnabled="True" /&gt;
+				&lt;Filter ModuleMask="Example.*" ModuleVersionMask="*" ClassMask="*" FunctionMask="*" IsEnabled="True" /&gt;
+				&lt;Filter ModuleMask="*" ModuleVersionMask="*" ClassMask="*&amp;lt;&amp;gt;*" FunctionMask="*" IsEnabled="True" /&gt;
+			&lt;/ExcludeFilters&gt;
+			&lt;AttributeFilters&gt;
+				&lt;Filter AttributeName="System.CodeDom.Compiler.GeneratedCodeAttribute" IsEnabled="True" /&gt;
+				&lt;Filter AttributeName="System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute" IsEnabled="True" /&gt;
+				&lt;Filter AttributeName="System.ObsoleteAttribute" IsEnabled="True" /&gt;
+			&lt;/AttributeFilters&gt;
+		&lt;/data&gt;
+	</s:String>
+</wpf:ResourceDictionary>

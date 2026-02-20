@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <Format>cobertura,opencover</Format>
+          <Exclude>[*.Tests]*,[xunit.*]*,[*.Example]*,[*.Example.*]*</Exclude>
+          <ExcludeByFile>**/Program.cs,**/Migrations/**/*.cs</ExcludeByFile>
+          <IncludeDirectory>../../src/**,../../integrations/**</IncludeDirectory>
+          <Include>[UtilityAi]*,[UtilityAi.Maf]*</Include>
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>true</UseSourceLink>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
