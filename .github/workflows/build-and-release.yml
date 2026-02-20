@@ -42,8 +42,8 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
+    - name: Build (update documentation)
+      run: dotnet build --no-restore --configuration Release /p:GenerateDocumentationFile=true
 
     - name: Test
       run: dotnet test --no-build --configuration Release --verbosity normal
