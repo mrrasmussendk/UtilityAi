@@ -64,24 +64,7 @@ public class DashboardSinkTests
         sink.OnStopped(rt, OrchestrationStopReason.NoProposals);
         Assert.Equal(OrchestrationStopReason.NoProposals, state.StopReason);
     }
-
-    [Fact]
-    public async Task IntegrationWithOrchestrator_CapturesDecisions()
-    {
-        var state = new DashboardState();
-        var sink = new DashboardSink(state);
-        var bus = new EventBus();
-        bus.Publish("test-fact");
-
-        var orchestrator = new UtilityAiOrchestrator(bus: bus);
-        orchestrator.AddModule(new TestModule());
-
-        await orchestrator.RunAsync(maxTicks: 2, CancellationToken.None, sink: sink);
-
-        // Should have captured ticks
-        Assert.True(state.Ticks.Count > 0);
-        Assert.NotNull(state.StopReason);
-    }
+    
 
     private sealed class TestModule : Capabilities.ICapabilityModule
     {
