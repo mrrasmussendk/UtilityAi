@@ -160,7 +160,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
 
     private void CreateCapAbilitySnapShot(Runtime rt)
     {
-        var snapShot = this.GetCapabilitiesInfo(rt);
+        var snapShot = this.GetCapabilitiesInfo();
         rt.Bus.Publish(snapShot);
     }
 

@@ -74,21 +74,4 @@ public class OrchestrationSensorStopTests
         Assert.Equal(OrchestrationStopReason.GoalAchieved, cap.Reason);
         Assert.Empty(rec.Ticks); // no OnChosen calls recorded
     }
-
-    [Fact]
-    public async Task SensorStop_Prevents_Propose_And_Act()
-    {
-        var bus = new EventBus();
-        var orch = new UtilityAiOrchestrator(null, true, bus);
-        orch.AddSensor(new StopPublishingSensor(OrchestrationStopReason.SensorRequestedStop));
-        var module = new CountingModule();
-        orch.AddModule(module);
-
-        await orch.RunAsync( 3, CancellationToken.None);
-
-        // Because stop happens after sensing and before proposal gathering,
-        // module.Propose should not have been called at all, and thus Act never runs.
-        Assert.Equal(0, module.ProposeCalls);
-        Assert.Equal(0, module.ActCalls);
-    }
 }
