@@ -30,8 +30,13 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\UtilityAi\UtilityAi.csproj" />
       <ProjectReference Include="..\..\integrations\UtilityAi.Maf\UtilityAi.Maf.csproj" />
-      <ProjectReference Include="..\..\examples\Example\Example.csproj" />
-      <ProjectReference Include="..\..\examples\Example.Maf\Example.Maf.csproj" />
+      <!-- Example projects excluded from code coverage - they are sample apps, not library code -->
+      <ProjectReference Include="..\..\examples\Example\Example.csproj">
+        <ExcludeFromCodeCoverage>true</ExcludeFromCodeCoverage>
+      </ProjectReference>
+      <ProjectReference Include="..\..\examples\Example.Maf\Example.Maf.csproj">
+        <ExcludeFromCodeCoverage>true</ExcludeFromCodeCoverage>
+      </ProjectReference>
     </ItemGroup>
 
 </Project>

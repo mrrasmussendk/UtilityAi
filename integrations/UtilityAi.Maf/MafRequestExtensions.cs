@@ -150,6 +150,10 @@ public static class MafRequestExtensions
         using System.Text.Json.JsonDocument structuredJson = System.Text.Json.JsonDocument.Parse(completion.Content[0].Text);
 
         // Try multiple strategies to find and deserialize the target type
+        if (structuredJson.RootElement.TryGetProperty(propertyName, out var element) && CanDeserialize<T>(element))
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<T>(element)!;
+        }
         var outputElement = FindDeserializableElement<T>(structuredJson.RootElement, propertyName);
 
         return System.Text.Json.JsonSerializer.Deserialize<T>(outputElement)!;
