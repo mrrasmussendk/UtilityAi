@@ -3,6 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/UtilityAi?color=blue)](https://www.nuget.org/packages/UtilityAi)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Tests](https://img.shields.io/badge/tests-203%20passing-brightgreen)](./Tests/)
+[![Coverage](https://codecov.io/gh/mrrasmussendk/UtilityAi/graph/badge.svg?branch=main)](https://codecov.io/gh/mrrasmussendk/UtilityAi)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A lightweight, modular .NET 8 framework for building **AI agent orchestration** systems using classic **Utility AI** decision-making patterns. The framework evaluates and scores candidate actions each tick, executing the highest-utility option based on current context — no hardcoded workflows required.
