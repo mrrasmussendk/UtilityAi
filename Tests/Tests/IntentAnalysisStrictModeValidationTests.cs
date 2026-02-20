@@ -127,12 +127,12 @@ public class IntentAnalysisStrictModeValidationTests
         // Validate entities property - Dictionary<string, JsonElement>
         Assert.True(properties.TryGetProperty("entities", out var entitiesProp));
         Assert.Equal("object", entitiesProp.GetProperty("type").GetString());
-        Assert.False(entitiesProp.GetProperty("additionalProperties").GetBoolean());
+        Assert.True(entitiesProp.GetProperty("additionalProperties").GetBoolean());
 
         // Validate parameters property - Dictionary<string, JsonElement>
         Assert.True(properties.TryGetProperty("parameters", out var parametersProp));
         Assert.Equal("object", parametersProp.GetProperty("type").GetString());
-        Assert.False(parametersProp.GetProperty("additionalProperties").GetBoolean());
+        Assert.True(parametersProp.GetProperty("additionalProperties").GetBoolean());
 
         // Validate required array - only non-nullable properties should be required
         var required = items.GetProperty("required");

@@ -49,6 +49,63 @@ public class IntentAnalysisSchemaTests
     }
 
     [Fact]
+    public void IntentAnalysis_EntitiesSchema_AllowsAdditionalProperties()
+    {
+        // Act - Generate schema and verify entities allows dynamic keys
+        var schema = JsonSchemaGenerator.BuildOutputArraySchemaFrom<IntentAnalysis>();
+        var schemaJson = JsonSerializer.Serialize(schema, new JsonSerializerOptions { WriteIndented = true });
+
+        _output.WriteLine("Generated Schema:");
+        _output.WriteLine(schemaJson);
+
+        var root = JsonDocument.Parse(schemaJson).RootElement;
+        var entitiesSchema = root.GetProperty("properties")
+            .GetProperty("output")
+            .GetProperty("items")
+            .GetProperty("properties")
+            .GetProperty("entities");
+
+        // Assert - Dictionary<string, JsonElement> must allow additionalProperties
+        // so OpenAI can return dynamic keys like "kilometer", "ticketId", etc.
+        Assert.Equal("object", entitiesSchema.GetProperty("type").GetString());
+        Assert.True(entitiesSchema.GetProperty("additionalProperties").GetBoolean(),
+            "entities schema must have additionalProperties: true to allow dynamic keys");
+    }
+
+    [Fact]
+    public void IntentAnalysis_WithDynamicEntityKeys_DeserializesCorrectly()
+    {
+        // Arrange - Simulate OpenAI response with dynamic entity keys like "kilometer"
+        var openAiResponse = """
+        {
+            "output": [
+                {
+                    "intent": "convert_distance",
+                    "entities": {
+                        "kilometer": 100,
+                        "targetUnit": "miles"
+                    },
+                    "confidence": 0.95,
+                    "parameters": null
+                }
+            ]
+        }
+        """;
+
+        // Act - Deserialize the output array item (same as production code path)
+        using var doc = JsonDocument.Parse(openAiResponse);
+        var outputArray = doc.RootElement.GetProperty("output");
+        var firstItem = outputArray[0];
+        var result = JsonSerializer.Deserialize<IntentAnalysis>(firstItem);
+
+        // Assert - Dynamic entity keys should be accessible
+        Assert.NotNull(result);
+        Assert.Equal("convert_distance", result!.Intent);
+        Assert.Equal(100, result.GetEntity<int>("kilometer"));
+        Assert.Equal("miles", result.GetEntity<string>("targetUnit"));
+    }
+
+    [Fact]
     public void IntentAnalysis_DeserializesFromOpenAiFormat()
     {
         // Arrange - Exact format OpenAI would return

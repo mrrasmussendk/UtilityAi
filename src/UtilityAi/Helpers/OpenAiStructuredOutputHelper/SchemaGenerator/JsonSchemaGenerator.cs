@@ -140,16 +140,14 @@ public static class JsonSchemaGenerator
             // Only support Dictionary<string, T>
             if (keyType == typeof(string))
             {
-                // For Dictionary<string, JsonElement>, use empty object with additionalProperties: false
-                // This makes it optional in strict mode - if not required, it can be omitted
+                // For Dictionary<string, JsonElement>, use object with additionalProperties: true
+                // to allow dynamic key-value pairs (e.g., entities like "kilometer": 100)
                 if (valueType == typeof(System.Text.Json.JsonElement))
                 {
                     return (new JsonObject
                     {
                         ["type"] = "object",
-                        ["properties"] = new JsonObject(),
-                        ["required"] = new JsonArray(),
-                        ["additionalProperties"] = false
+                        ["additionalProperties"] = true
                     }, false);
                 }
 
