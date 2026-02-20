@@ -14,6 +14,9 @@ namespace UtilityAi.Capabilities;
 /// </remarks>
 internal sealed class CapabilityFilterWrapper : ICapabilityModule
 {
+    private static readonly MethodInfo TryGetMethodDefinition = typeof(EventBus).GetMethod(nameof(EventBus.TryGet))
+        ?? throw new InvalidOperationException("Unable to locate EventBus.TryGet method.");
+
     private readonly ICapabilityModule _inner;
     private readonly ActiveWhenAttribute[]? _activeWhenAttrs;
     private readonly Type[]? _requiredFacts;
@@ -52,12 +55,7 @@ internal sealed class CapabilityFilterWrapper : ICapabilityModule
         {
             foreach (var factType in _requiredFacts)
             {
-                var tryGetMethod = typeof(EventBus).GetMethod(nameof(EventBus.TryGet))!
-                    .MakeGenericMethod(factType);
-                var parameters = new object?[] { null };
-                var hasFact = (bool)tryGetMethod.Invoke(rt.Bus, parameters)!;
-
-                if (!hasFact)
+                if (!TryHasFact(rt.Bus, factType))
                 {
                     yield break; // Required fact missing
                 }
@@ -76,13 +74,18 @@ internal sealed class CapabilityFilterWrapper : ICapabilityModule
         // Fact-based condition
         if (condition.FactType is not null)
         {
-            var tryGetMethod = typeof(EventBus).GetMethod(nameof(EventBus.TryGet))!
-                .MakeGenericMethod(condition.FactType);
-            var parameters = new object?[] { null };
-            return (bool)tryGetMethod.Invoke(rt.Bus, parameters)!;
+            return TryHasFact(rt.Bus, condition.FactType);
         }
 
 
         return true; // No condition specified, always active
+    }
+
+    private static bool TryHasFact(EventBus bus, Type factType)
+    {
+        var tryGetMethod = TryGetMethodDefinition.MakeGenericMethod(factType);
+        var parameters = new object?[] { null };
+        var result = tryGetMethod.Invoke(bus, parameters);
+        return result is bool hasFact && hasFact;
     }
 }

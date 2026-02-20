@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace UtilityAi.Utils;
 
 /// <summary>
@@ -81,10 +83,10 @@ public sealed class EventBus : IDisposable
                     {
                         (handler as Action<T>)?.Invoke(msg);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Swallow subscriber exceptions to prevent cascading failures
-                        // Note: All exceptions are caught to ensure stability
+                        // Continue notifying other subscribers, but log the failure for diagnostics.
+                        Trace.TraceError("EventBus subscriber threw exception for {0}: {1}", type, ex);
                     }
                 }
             }
