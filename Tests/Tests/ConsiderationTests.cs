@@ -54,6 +54,13 @@ public class ConsiderationTests
         Assert.Equal(0.0, missing.Evaluate(rt));
     }
 
+    [Fact]
+    public void FactExists_And_FactMissing_DefaultNames_AreSet()
+    {
+        Assert.Equal("FactExists<Int32>", new FactExists<int>().Name);
+        Assert.Equal("FactMissing<Int32>", new FactMissing<int>().Name);
+    }
+
     private sealed record Sig(double V);
 
     [Fact]
