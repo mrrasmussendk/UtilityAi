@@ -105,34 +105,30 @@ public class EligibilityTests
     }
 
     [Fact]
-    public void NoRepeatEligible_Returns_False_When_Id_In_Stack()
+    public void NoRepeatEligible_Returns_False_When_Id_In_History()
     {
         var bus = new EventBus();
         var rt = new Runtime(bus,  0);
         var eligibility = new NoRepeatEligible("test-id");
         
-        // Create a stack with the ID
-        var stack = new Stack<string>();
-        stack.Push("test-id");
-        bus.Publish(stack);
+        // Publish execution history as IReadOnlyList<string> (matching orchestrator behavior)
+        bus.Publish<IReadOnlyList<string>>(new List<string> { "test-id" });
         
-        // Should return false when ID is in stack
+        // Should return false when ID is in execution history
         Assert.False(eligibility.IsEligible(rt));
     }
 
     [Fact]
-    public void NoRepeatEligible_Returns_True_When_Id_Not_In_Stack()
+    public void NoRepeatEligible_Returns_True_When_Id_Not_In_History()
     {
         var bus = new EventBus();
         var rt = new Runtime(bus,  0);
         var eligibility = new NoRepeatEligible("test-id");
         
-        // Create a stack without the ID
-        var stack = new Stack<string>();
-        stack.Push("other-id");
-        bus.Publish(stack);
+        // Publish execution history as IReadOnlyList<string> (matching orchestrator behavior)
+        bus.Publish<IReadOnlyList<string>>(new List<string> { "other-id" });
         
-        // Should return true when ID is not in stack
+        // Should return true when ID is not in execution history
         Assert.True(eligibility.IsEligible(rt));
     }
 
@@ -155,5 +151,35 @@ public class EligibilityTests
     {
         var eligibility = new NoRepeatEligible("test-id");
         Assert.Equal("NoRepeatEligible", eligibility.Name);
+    }
+
+    [Fact]
+    public async Task NoRepeatEligible_BlocksRepeat_ViaOrchestrator()
+    {
+        var bus = new EventBus();
+        var orch = new UtilityAiOrchestrator(null, false, bus);
+        var sink = new RecordingSink();
+        var executedIds = new List<string>();
+
+        var proposalA = new Proposal(
+            id: "A",
+            cons: new IConsideration[] { new ConstantValue(0.9) },
+            act: ct => { executedIds.Add("A"); return Task.CompletedTask; },
+            eligibilities: new IEligibility[] { new NoRepeatEligible("A") }
+        );
+        var proposalB = new Proposal(
+            id: "B",
+            cons: new IConsideration[] { new ConstantValue(0.5) },
+            act: ct => { executedIds.Add("B"); return Task.CompletedTask; }
+        );
+
+        orch.AddModule(new NoopModule(proposalA, proposalB));
+
+        // Run 2 ticks: First tick should choose A (higher utility), second tick A is ineligible so B
+        await orch.RunAsync(2, CancellationToken.None, sink);
+
+        Assert.Equal(2, executedIds.Count);
+        Assert.Equal("A", executedIds[0]);
+        Assert.Equal("B", executedIds[1]);
     }
 }

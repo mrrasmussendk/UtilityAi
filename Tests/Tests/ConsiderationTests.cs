@@ -92,4 +92,36 @@ public class ConsiderationTests
 
         Assert.Equal(1.0, consideration.Evaluate(rt));
     }
+
+    [Fact]
+    public void CollectionSize_ThrowsWhenDomainMaxEqualsMin()
+    {
+        var curve = new UtilityAi.Evaluators.PowerCurve(new UtilityAi.Evaluators.Range(0, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new CollectionSize<List<int>>(l => l.Count, curve, (5, 5)));
+    }
+
+    [Fact]
+    public void CollectionSize_ThrowsWhenDomainMaxLessThanMin()
+    {
+        var curve = new UtilityAi.Evaluators.PowerCurve(new UtilityAi.Evaluators.Range(0, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new CollectionSize<List<int>>(l => l.Count, curve, (10, 5)));
+    }
+
+    [Fact]
+    public void TimeSinceEvent_ThrowsWhenDomainMaxEqualsMin()
+    {
+        var curve = new UtilityAi.Evaluators.PowerCurve(new UtilityAi.Evaluators.Range(0, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new TimeSinceEvent<string>(curve, (5.0, 5.0)));
+    }
+
+    [Fact]
+    public void TimeSinceEvent_ThrowsWhenDomainMaxLessThanMin()
+    {
+        var curve = new UtilityAi.Evaluators.PowerCurve(new UtilityAi.Evaluators.Range(0, 1));
+        Assert.Throws<ArgumentException>(() =>
+            new TimeSinceEvent<string>(curve, (10.0, 5.0)));
+    }
 }

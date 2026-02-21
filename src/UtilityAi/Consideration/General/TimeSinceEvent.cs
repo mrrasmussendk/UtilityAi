@@ -21,6 +21,10 @@ public sealed class TimeSinceEvent<T> : IConsideration where T : class
     public TimeSinceEvent(ICurve curve, (double min, double max) inputDomain)
     {
         _curve = curve ?? throw new ArgumentNullException(nameof(curve));
+
+        if (inputDomain.max <= inputDomain.min)
+            throw new ArgumentException("Input domain max must be greater than min.", nameof(inputDomain));
+
         _inputDomain = inputDomain;
     }
 
