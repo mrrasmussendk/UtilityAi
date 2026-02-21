@@ -23,9 +23,13 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     private readonly List<ISensor> _sensors = new();
     private readonly List<ICapabilityModule> _modules = new();
     private readonly ISelectionStrategy _selector;
-    private readonly Stack<string> _executionStack = new Stack<string>();
+    private readonly List<string> _executionHistory = new();
     private readonly bool _stopAtZero = true;
     private EventBus _bus;
+
+    // Cache for capability snapshot to avoid recreating EventBus every tick
+    private IReadOnlyList<CapabilityInfo>? _cachedCapabilities;
+    private int _modulesCountAtLastCache;
 
     /// <summary>
     /// Creates a new UtilityAiOrchestrator with a default EventBus.
@@ -71,6 +75,7 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
     public UtilityAiOrchestrator AddModule(ICapabilityModule m)
     {
         _modules.Add(m);
+        _cachedCapabilities = null; // Invalidate cache when modules change
         return this;
     }
 
@@ -145,8 +150,9 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
 
         await ActAndNotify(choice.Value.chosen, rt, sink, ct);
 
-        _executionStack.Push(choice.Value.chosen.Id);
-        _bus.Publish<IReadOnlyList<string>>(_executionStack.ToList());
+        // Add to front of list (most recent first) - avoids ToList() allocation
+        _executionHistory.Insert(0, choice.Value.chosen.Id);
+        _bus.Publish<IReadOnlyList<string>>(_executionHistory);
 
         // Update execution history
         var existingHistory = _bus.GetOrDefault<ExecutionHistory>();
@@ -176,9 +182,15 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
 
     private void CreateCapAbilitySnapShot(Runtime rt)
     {
-        var capabilities = this.GetCapabilitiesInfo();
-        rt.Bus.Publish(capabilities);
-        rt.Bus.Publish(new CapabilitiesSnapshot(capabilities));
+        // Only regenerate capabilities if cache is invalid (modules were added)
+        if (_cachedCapabilities == null || _modulesCountAtLastCache != _modules.Count)
+        {
+            _cachedCapabilities = GetCapabilitiesInfo();
+            _modulesCountAtLastCache = _modules.Count;
+        }
+
+        rt.Bus.Publish(_cachedCapabilities);
+        rt.Bus.Publish(new CapabilitiesSnapshot(_cachedCapabilities));
     }
 
     private async Task SenseAsyncAll(Runtime rt, CancellationToken ct)
@@ -220,14 +232,16 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
             .Select(p => (p, u: p.Utility(rt)))
             .OrderByDescending(x => x.u)
             .ToList();
-        sink.OnScored(rt, scored.Select(x => (x.p, x.u)).ToList());
+        // scored is already List<(Proposal, double)> - pass directly without transformation
+        sink.OnScored(rt, scored);
         return scored;
     }
 
     private (Proposal chosen, double utility)? ChooseAndMaybeStopAtZero(Runtime rt, List<(Proposal p, double u)> scored,
         IOrchestrationSink sink, bool stopAtZero)
     {
-        var chosen = _selector.Select(scored.Select(x => (x.p, x.u)).ToList(), rt);
+        // scored is already the correct type - pass directly without transformation
+        var chosen = _selector.Select(scored, rt);
         var match = scored.FirstOrDefault(x =>
             ReferenceEquals(x.p, chosen) ||
             string.Equals(x.p.Id, chosen.Id, StringComparison.Ordinal));

@@ -1,3 +1,4 @@
+using System.Globalization;
 using UtilityAi.Utils;
 
 namespace UtilityAi.Consideration.General;
@@ -19,7 +20,7 @@ public sealed class ConstantValue : IConsideration
         _value = Math.Clamp(value, 0.0, 1.0);
     }
 
-    public string Name => $"Constant({_value:F2})";
+    public string Name => $"Constant({_value.ToString("F2", CultureInfo.InvariantCulture)})";
 
     public double Evaluate(Runtime rt) => _value;
 }
