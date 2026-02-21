@@ -22,4 +22,15 @@ public class EventBusTests
         // string remains the latest published string
         Assert.Equal("second", bus.GetOrDefault<string>());
     }
+
+    [Fact]
+    public void FactExists_ReturnsExpectedValue()
+    {
+        var bus = new EventBus();
+        Assert.False(bus.FactExists<string>());
+
+        bus.Publish("hello");
+
+        Assert.True(bus.FactExists<string>());
+    }
 }

@@ -26,7 +26,7 @@ public sealed class HasFact<T> : IConsideration where T : notnull
 
     public double Evaluate(Runtime rt)
     {
-        return rt.Bus.TryGet<T>(out _) ? 1.0 : 0.0;
+        return rt.Bus.FactExists<T>() ? 1.0 : 0.0;
     }
 }
 
@@ -54,7 +54,7 @@ public sealed class NotHasFact<T> : IConsideration where T : notnull
 
     public double Evaluate(Runtime rt)
     {
-        return rt.Bus.TryGet<T>(out _) ? 0.0 : 1.0;
+        return rt.Bus.FactExists<T>() ? 0.0 : 1.0;
     }
 }
 
@@ -117,4 +117,46 @@ public sealed class FixedValueConsideration : IConsideration
     }
 
     public double Evaluate(Runtime rt) => _value;
+}
+
+/// <summary>
+/// Alias for <see cref="HasFact{T}"/> using explicit existence naming.
+/// </summary>
+public sealed class FactExists<T> : IConsideration where T : notnull
+{
+    private readonly HasFact<T> _inner;
+
+    /// <summary>
+    /// Creates a consideration that checks if a fact exists.
+    /// </summary>
+    /// <param name="name">Name for debugging/logging. Defaults to "FactExists&lt;TypeName&gt;"</param>
+    public FactExists(string? name = null)
+    {
+        _inner = new HasFact<T>(name ?? $"FactExists<{typeof(T).Name}>");
+    }
+
+    public string Name => _inner.Name;
+
+    public double Evaluate(Runtime rt) => _inner.Evaluate(rt);
+}
+
+/// <summary>
+/// Alias for <see cref="NotHasFact{T}"/> using explicit existence naming.
+/// </summary>
+public sealed class FactMissing<T> : IConsideration where T : notnull
+{
+    private readonly NotHasFact<T> _inner;
+
+    /// <summary>
+    /// Creates a consideration that checks if a fact does not exist.
+    /// </summary>
+    /// <param name="name">Name for debugging/logging. Defaults to "FactMissing&lt;TypeName&gt;"</param>
+    public FactMissing(string? name = null)
+    {
+        _inner = new NotHasFact<T>(name ?? $"FactMissing<{typeof(T).Name}>");
+    }
+
+    public string Name => _inner.Name;
+
+    public double Evaluate(Runtime rt) => _inner.Evaluate(rt);
 }

@@ -36,6 +36,31 @@ public class ConsiderationTests
         Assert.Equal("HasFact<Int32>", cons.Name);
     }
 
+    [Fact]
+    public void FactExists_And_FactMissing_MatchHasFactBehavior()
+    {
+        var bus = new EventBus();
+        var rt = new Runtime(bus, 0);
+
+        var exists = new FactExists<int>();
+        var missing = new FactMissing<int>();
+
+        Assert.Equal(0.0, exists.Evaluate(rt));
+        Assert.Equal(1.0, missing.Evaluate(rt));
+
+        bus.Publish(42);
+
+        Assert.Equal(1.0, exists.Evaluate(rt));
+        Assert.Equal(0.0, missing.Evaluate(rt));
+    }
+
+    [Fact]
+    public void FactExists_And_FactMissing_DefaultNames_AreSet()
+    {
+        Assert.Equal("FactExists<Int32>", new FactExists<int>().Name);
+        Assert.Equal("FactMissing<Int32>", new FactMissing<int>().Name);
+    }
+
     private sealed record Sig(double V);
 
     [Fact]

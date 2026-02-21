@@ -134,6 +134,17 @@ public sealed class EventBus : IDisposable
     }
 
     /// <summary>
+    /// Returns true when a fact of the given type exists in the current scope.
+    /// </summary>
+    /// <typeparam name="T">The type of fact to check.</typeparam>
+    /// <returns>True if a fact of type <typeparamref name="T"/> exists; otherwise false.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown if the EventBus has been disposed.</exception>
+    public bool FactExists<T>()
+    {
+        return TryGet<T>(out _);
+    }
+
+    /// <summary>
     /// Retrieves the event history for the specified type, ordered from oldest to newest.
     /// </summary>
     /// <typeparam name="T">The type of events to retrieve.</typeparam>
