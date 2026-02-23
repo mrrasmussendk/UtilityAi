@@ -270,6 +270,50 @@ bus.Publish(new StopSignal("User requested shutdown"));
 
 ---
 
+## 📡 Built-in Orchestration Sinks
+
+Sinks observe the orchestration lifecycle (`OnTickStart`, `OnScored`, `OnChosen`, `OnActed`, `OnStopped`) and are passed to `RunAsync`:
+
+```csharp
+var sink = new RecordingSink();
+await orchestrator.RunAsync(maxTicks: 10, ct, sink);
+```
+
+### `NullSink`
+Default no-op sink (`NullSink.Instance`) for scenarios where you don't need telemetry.
+
+```csharp
+await orchestrator.RunAsync(maxTicks: 10, ct, NullSink.Instance);
+```
+
+### `CompositeSink`
+Forwards sink events to multiple sinks in order, so you can combine logging/metrics/testing sinks.
+
+```csharp
+var sink = new CompositeSink(
+    new LoggingSink(logger),
+    new RecordingSink()
+);
+await orchestrator.RunAsync(maxTicks: 10, ct, sink);
+```
+
+### `RecordingSink`
+Records per-tick decisions as `OrchestrationTick` entries for diagnostics and tests.
+
+```csharp
+var recording = new RecordingSink();
+await orchestrator.RunAsync(maxTicks: 3, ct, recording);
+
+foreach (var tick in recording.Ticks)
+{
+    Console.WriteLine($"{tick.Tick}: {tick.Chosen.Id} ({tick.ChosenUtility:F3})");
+}
+```
+
+> Note: The `UtilityAi.Dashboard` tool package also includes `DashboardSink` for real-time visualization.
+
+---
+
 ## 📦 Built-in Facts
 
 ### Time Facts
