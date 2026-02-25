@@ -71,4 +71,34 @@ public class InMemoryStoreTests
         var count = await store.CountAsync<TestFact>();
         Assert.Equal(3, count);
     }
+
+    [Fact]
+    public async Task InMemoryStore_InterfaceConvenienceMethods_DelegateToAsyncMethods()
+    {
+        IMemoryStore store = new InMemoryStore();
+        var now = DateTimeOffset.UtcNow;
+
+        await store.Store(new TestFact("fact"), now);
+        var count = await store.Count<TestFact>();
+        var results = await store.Recall<TestFact>(new MemoryQuery { MaxResults = 1 });
+
+        Assert.Equal(1, count);
+        Assert.Single(results);
+        Assert.Equal("fact", results[0].Fact.Data);
+    }
+
+    [Fact]
+    public async Task InMemoryStore_PruneConvenienceMethod_DelegatesToAsyncMethod()
+    {
+        IMemoryStore store = new InMemoryStore();
+        var now = DateTimeOffset.UtcNow;
+
+        await store.Store(new TestFact("old"), now.AddMinutes(-10));
+        await store.Store(new TestFact("recent"), now);
+        await store.Prune(TimeSpan.FromMinutes(1));
+
+        var results = await store.Recall<TestFact>(new MemoryQuery { MaxResults = 10 });
+        Assert.Single(results);
+        Assert.Equal("recent", results[0].Fact.Data);
+    }
 }

@@ -14,6 +14,7 @@ A lightweight, modular .NET 8 framework for building **AI agent orchestration** 
 
 ## Table of Contents
 
+- [The Concept: Utility AI](#-the-concept-utility-ai)
 - [Features](#-features)
 - [Quick Start](#-quick-start)
 - [Architecture Overview](#-architecture-overview)
@@ -26,6 +27,61 @@ A lightweight, modular .NET 8 framework for building **AI agent orchestration** 
 - [Use Cases](#-use-cases)
 - [Contributing](#-contributing)
 - [License](#-license)
+
+---
+
+## 🎓 The Concept: Utility AI
+
+**Utility AI** is a decision-making architecture pioneered by [Dave Mark](http://www.youreinthecomputergame.com/), author of *Behavioral Mathematics for Game AI* (2009) and a leading voice in the game AI community. Through his influential GDC talks — most notably *"Architecture Tricks: Managing Behaviors in Time, Space, and Depth"* and the *"Improving AI Decision Modeling Through Utility Theory"* series — Mark demonstrated how mathematical response curves can replace brittle state machines and rigid behavior trees with fluid, context-sensitive reasoning.
+
+### The Core Idea
+
+Traditional AI decision systems (finite state machines, behavior trees, rule engines) hardcode transitions between states. They become fragile as complexity grows — every new behavior requires hand-authored connections that are difficult to maintain and impossible to tune gracefully.
+
+Utility AI takes a fundamentally different approach: **every possible action is scored numerically, and the highest-scoring action wins.**
+
+```
+For each candidate action:
+    score = f(world state, action parameters)
+
+Execute the action with the highest score.
+```
+
+This simple loop produces remarkably sophisticated behavior because:
+
+1. **Decisions are continuous, not discrete.** Instead of binary "on/off" transitions, each action has a score on a spectrum (0.0 to 1.0), allowing smooth, proportional responses to changing conditions.
+2. **Multiple factors combine naturally.** An action's final score is the product of several *considerations* — independent scoring functions that each evaluate one axis of the decision (urgency, cost, opportunity, risk, etc.). This multiplicative composition means a zero in any consideration vetoes the action entirely, while strong signals across all axes produce a high combined score.
+3. **Response curves shape behavior.** Each consideration maps a raw input signal to a normalized score using a mathematical curve (linear, logistic, exponential, piecewise). By adjusting curve parameters, designers can fine-tune *how aggressively* or *conservatively* an agent reacts to a stimulus — without touching any logic code.
+4. **New actions are additive, not invasive.** Adding a new behavior means adding a new candidate with its own considerations. There are no transitions to rewire and no state graphs to restructure.
+
+### The Infinite Axis Utility System
+
+Mark's architecture — sometimes called the **Infinite Axis Utility System (IAUS)** — formalizes this pattern into a reusable framework:
+
+| Concept | Role |
+|---------|------|
+| **Action** | A candidate behavior the agent *could* perform |
+| **Consideration** | A single scoring axis that evaluates one aspect of the world state (0.0–1.0) |
+| **Response Curve** | A mathematical function that maps a raw signal to a normalized score |
+| **Utility Score** | The combined score of all considerations for an action, determining its priority |
+
+The power of this approach is its **composability**: considerations are independent and reusable, curves are data-driven and tunable, and the set of candidate actions is open-ended.
+
+### From Game AI to Agent Orchestration
+
+While Utility AI was originally developed for game NPCs, its principles apply directly to modern AI agent orchestration:
+
+| Game AI | Agent Orchestration |
+|---------|---------------------|
+| NPC selects an action each frame | Agent selects a capability each tick |
+| World state drives considerations | EventBus facts drive considerations |
+| Health, ammo, distance as signals | Token budget, task priority, user intent as signals |
+| Patrol, attack, flee as actions | Research, summarize, respond as actions |
+
+This framework brings Dave Mark's Utility AI architecture to the .NET ecosystem, extending it with event-sourced state management, LLM intent integration, and multi-agent coordination — while preserving the elegant simplicity of **score everything, pick the best**.
+
+> *"The beauty of utility-based systems is that they allow you to ask the question 'what is the best thing to do right now?' rather than 'what state should I be in?'"*
+> — Dave Mark
 
 ---
 
@@ -423,7 +479,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 ## 🙏 Acknowledgments
 
 Built with inspiration from:
-- **Utility AI** pattern from game development
+- **[Dave Mark](http://www.youreinthecomputergame.com/)** — whose work on Utility AI, the *Infinite Axis Utility System*, and *Behavioral Mathematics for Game AI* laid the theoretical foundation for this framework
 - **Blackboard pattern** from classical AI
 - **Java Annotations** (Spring Framework, Jakarta EE)
 - Modern agent orchestration (Microsoft Agent Framework, Semantic Kernel, AutoGen, LangGraph)

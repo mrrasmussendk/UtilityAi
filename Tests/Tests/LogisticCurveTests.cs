@@ -76,4 +76,25 @@ public class LogisticCurveTests
         Assert.Throws<ArgumentException>(() => 
             LogisticCurve.FitFromAnchors((0.2, 0.5), (0.8, 0.5 + epsilon), domain, output));
     }
+
+    [Fact]
+    public void LogisticCurve_FitFromAnchors_ThrowsForNumericallyUnstableK()
+    {
+        var domain = new UtilityAi.Evaluators.Range(0, 1);
+        var output = new UtilityAi.Evaluators.Range(0, 1);
+
+        // Tiny y delta around midpoint creates an almost-flat logistic fit.
+        Assert.Throws<ArgumentException>(() =>
+            LogisticCurve.FitFromAnchors((0.0, 0.5), (1.0, 0.5000000001), domain, output));
+    }
+
+    [Fact]
+    public void LogisticCurve_FitFromAnchors_ThrowsForZeroOutputRange()
+    {
+        var domain = new UtilityAi.Evaluators.Range(0, 1);
+        var output = new UtilityAi.Evaluators.Range(1, 1);
+
+        Assert.Throws<ArgumentException>(() =>
+            LogisticCurve.FitFromAnchors((0.25, 0.2), (0.75, 0.8), domain, output));
+    }
 }

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace UtilityAi.Utils;
 
 /// <summary>
@@ -81,10 +83,10 @@ public sealed class EventBus : IDisposable
                     {
                         (handler as Action<T>)?.Invoke(msg);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Swallow subscriber exceptions to prevent cascading failures
-                        // Note: All exceptions are caught to ensure stability
+                        // Continue notifying other subscribers, but log the failure for diagnostics.
+                        Trace.TraceError("EventBus subscriber threw exception for {0}: {1}", type, ex);
                     }
                 }
             }
@@ -129,6 +131,17 @@ public sealed class EventBus : IDisposable
         {
             return _latest.TryGetValue(typeof(T), out var v) ? (T?)v : default;
         }
+    }
+
+    /// <summary>
+    /// Returns true when a fact of the given type exists in the current scope.
+    /// </summary>
+    /// <typeparam name="T">The type of fact to check.</typeparam>
+    /// <returns>True if a fact of type <typeparamref name="T"/> exists; otherwise false.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown if the EventBus has been disposed.</exception>
+    public bool FactExists<T>()
+    {
+        return TryGet<T>(out _);
     }
 
     /// <summary>

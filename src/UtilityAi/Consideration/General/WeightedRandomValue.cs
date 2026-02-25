@@ -1,3 +1,4 @@
+using System.Globalization;
 using UtilityAi.Utils;
 
 namespace UtilityAi.Consideration.General;
@@ -26,7 +27,7 @@ public sealed class WeightedRandomValue<T> : IConsideration where T : class
         _deterministicWeight = Math.Clamp(deterministicWeight, 0.0, 1.0);
     }
 
-    public string Name => $"WeightedRandom<{typeof(T).Name}>({_deterministicWeight:F2})";
+    public string Name => $"WeightedRandom<{typeof(T).Name}>({_deterministicWeight.ToString("F2", CultureInfo.InvariantCulture)})";
 
     public double Evaluate(Runtime rt)
     {

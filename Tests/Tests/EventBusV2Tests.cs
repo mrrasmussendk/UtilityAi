@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using UtilityAi.Utils;
 using Xunit;
 
@@ -161,6 +162,28 @@ public class EventBusV2Tests
         bus.Publish(new TestMessage("test"));
 
         Assert.Equal(1, successCount); // Second handler should still run
+    }
+
+    [Fact]
+    public void Subscribe_LogsHandlerExceptions()
+    {
+        var bus = new EventBus();
+        using var writer = new StringWriter();
+        using var listener = new TextWriterTraceListener(writer);
+        Trace.Listeners.Add(listener);
+
+        try
+        {
+            using var _ = bus.Subscribe<TestMessage>(_ => throw new InvalidOperationException("boom"));
+            bus.Publish(new TestMessage("test"));
+
+            listener.Flush();
+            Assert.Contains("EventBus subscriber threw exception", writer.ToString());
+        }
+        finally
+        {
+            Trace.Listeners.Remove(listener);
+        }
     }
 
     [Fact]
