@@ -35,6 +35,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
     private readonly bool _includeCapabilities;
     private readonly bool _reanalyzeAfterActions;
     private readonly SchemaGeneratorOptions _schemaOptions;
+    private readonly string _baseInstructions;
 
     /// <summary>
     /// Creates an intent analysis sensor using OpenAI's AiRequestBuilder.
@@ -53,6 +54,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         Func<object, string> messageExtractor,
         bool includeCapabilities = false,
         bool reanalyzeAfterActions = false,
+        string baseInstructions = "",
         SchemaGeneratorOptions? schemaOptions = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
@@ -61,6 +63,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         _messageExtractor = messageExtractor ?? throw new ArgumentNullException(nameof(messageExtractor));
         _includeCapabilities = includeCapabilities;
         _reanalyzeAfterActions = reanalyzeAfterActions;
+        _baseInstructions = baseInstructions;   
         _schemaOptions = schemaOptions ?? new SchemaGeneratorOptions
         {
             RequiredStrategy = RequiredStrategy.AllProperties
@@ -76,6 +79,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         Func<T, string> messageExtractor,
         bool includeCapabilities = false,
         bool reanalyzeAfterActions = false,
+        string baseInstructions = "",
         SchemaGeneratorOptions? schemaOptions = null) where T : class
     {
         return new MafAiLlmIntentSensor(
@@ -85,6 +89,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
             obj => messageExtractor((T)obj),
             includeCapabilities,
             reanalyzeAfterActions,
+            baseInstructions,
             schemaOptions
         );
     }
@@ -104,7 +109,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         if (!ShouldAnalyze(rt.Bus)) return;
 
         // Build prompt
-        var prompt = BuildPrompt(messageText, rt);
+        var prompt = BuildPrompt(messageText, this._baseInstructions, rt);
 
         // Call LLM using AiRequestBuilder
         var completion = AiRequestBuilder.Create()
@@ -140,7 +145,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         return currentActionCount > lastContext.ActionCount;
     }
 
-    private string BuildPrompt(string messageText, Runtime rt)
+    private string BuildPrompt(string messageText, string? instructions, Runtime rt)
     {
         var sb = new StringBuilder();
 
@@ -207,6 +212,7 @@ public sealed class MafAiLlmIntentSensor : ISensor
         sb.AppendLine("3. Extract entities that match the parameters required by relevant system actions that have NOT been executed");
         sb.AppendLine("4. Use entity keys that correspond to action parameters (not generic keys like 'country', 'unit')");
         sb.AppendLine("5. If the user's request is already fulfilled, set intent to 'none' or leave entities empty");
+        sb.AppendLine(instructions);
         sb.AppendLine();
         sb.AppendLine("## Output Format");
         sb.AppendLine("Respond with JSON containing:");
