@@ -31,9 +31,10 @@ Console.WriteLine($"📝 Model: gpt-3.5-turbo\n");
 
 var skillId = Environment.GetEnvironmentVariable("OPENAI_SKILL_ID");
 var skillVersion = Environment.GetEnvironmentVariable("OPENAI_SKILL_VERSION");
+var effectiveSkillVersion = string.IsNullOrWhiteSpace(skillVersion) ? "latest" : skillVersion;
 if (!string.IsNullOrWhiteSpace(skillId))
 {
-    Console.WriteLine($"🧰 OpenAI skill enabled: {skillId} ({(string.IsNullOrWhiteSpace(skillVersion) ? "latest" : skillVersion)})");
+    Console.WriteLine($"🧰 OpenAI skill enabled: {skillId} ({effectiveSkillVersion})");
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -45,7 +46,7 @@ var orchestrator = new UtilityAiOrchestrator(bus: bus)
     .AddModule(new ChatBotModule(
         new OpenAIProvider("gpt-3.5-turbo", apiKey),
         skillId,
-        skillVersion));
+        effectiveSkillVersion));
 
 // ════════════════════════════════════════════════════════════════════════
 // Chat Loop
@@ -101,7 +102,7 @@ public record AssistantMessage(string Text);
 [RequiresFact<UserMessage>]
 public class ChatBotModule : LlmCapabilityModule
 {
-    public ChatBotModule(ILlmProvider provider, string? skillId = null, string? skillVersion = null) : base(provider, new LlmModuleConfiguration(
+    public ChatBotModule(ILlmProvider provider, string? skillId = null, string skillVersion = "latest") : base(provider, new LlmModuleConfiguration(
         DefaultOptions: new LlmOptions(
             Temperature: 0.7,
             MaxTokens: 500,
@@ -109,7 +110,7 @@ public class ChatBotModule : LlmCapabilityModule
                 ? null
                 : new OpenAiSkillsOptions(
                     EnvironmentType: OpenAiSkillEnvironmentType.Local,
-                    References: new[] { new OpenAiSkillReference(skillId, string.IsNullOrWhiteSpace(skillVersion) ? "latest" : skillVersion) })),
+                    References: new[] { new OpenAiSkillReference(skillId, skillVersion) })),
         OnResponseReceived: async (rt, response, ct) =>
         {
             // Publish assistant response to EventBus
