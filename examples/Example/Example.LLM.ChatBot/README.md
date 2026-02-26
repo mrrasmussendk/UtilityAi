@@ -39,6 +39,24 @@ set OPENAI_API_KEY=sk-...
 $env:OPENAI_API_KEY="sk-..."
 ```
 
+### Optional: Mount a hosted OpenAI skill
+
+This example can mount a hosted OpenAI skill through `tools[].environment.skills` (Responses API path) when `OPENAI_SKILL_ID` is set.
+
+```bash
+# Optional skill reference
+export OPENAI_SKILL_ID=skill_123
+export OPENAI_SKILL_VERSION=latest
+```
+
+An example skill source is included at `Skills/FileWorkspace/Skill.md` with shell commands for creating folders/files. Upload it to OpenAI Skills API and then use the returned skill id:
+
+```bash
+curl -X POST 'https://api.openai.com/v1/skills' \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F 'files[]=@./Skills/FileWorkspace/Skill.md;filename=file_workspace/Skill.md;type=text/markdown'
+```
+
 ### Run
 
 ```bash
