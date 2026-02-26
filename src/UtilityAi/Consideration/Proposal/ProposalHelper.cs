@@ -31,6 +31,7 @@ public sealed class ProposalBuilder
     private string? _description;
     private IntentMatchSpec? _intentMatch;
     private readonly List<IntentParameterUsage> _intentParameters = new();
+    private readonly List<ProposalSkill> _skills = new();
 
     internal ProposalBuilder(string id)
     {
@@ -133,6 +134,24 @@ public sealed class ProposalBuilder
     }
 
     /// <summary>
+    /// Adds a skill to the proposal.
+    /// </summary>
+    public ProposalBuilder WithSkill(ProposalSkill skill)
+    {
+        _skills.Add(skill);
+        return this;
+    }
+
+    /// <summary>
+    /// Auto-discovers skills using the module folder structure: Module/Skills/&lt;skill&gt;/Skill.md.
+    /// </summary>
+    public ProposalBuilder WithDiscoveredSkills(string moduleDirectory)
+    {
+        _skills.AddRange(ProposalSkillDiscovery.DiscoverFromModuleDirectory(moduleDirectory));
+        return this;
+    }
+
+    /// <summary>
     /// Declares an intent parameter AND adds a consideration that scores based on it.
     /// Shorthand for UsesIntentParameter + WithConsideration.
     /// </summary>
@@ -189,7 +208,8 @@ public sealed class ProposalBuilder
             Temperature = _temperature,
             Description = _description,
             IntentMatch = _intentMatch,
-            IntentParameters = _intentParameters.Count > 0 ? _intentParameters : null
+            IntentParameters = _intentParameters.Count > 0 ? _intentParameters : null,
+            Skills = _skills.Count > 0 ? _skills : null
         };
     }
 

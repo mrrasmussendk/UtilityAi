@@ -1,4 +1,5 @@
-﻿using UtilityAi.Utils;
+﻿using UtilityAi.Capabilities;
+using UtilityAi.Utils;
 
 namespace UtilityAi.Consideration;
 
@@ -26,6 +27,11 @@ public sealed class Proposal
     /// Used to build LLM prompts and validate intent analysis.
     /// </summary>
     public IReadOnlyList<Intent.IntentParameterUsage>? IntentParameters { get; init; }
+
+    /// <summary>
+    /// Optional skills associated with this proposal, discoverable from Skill.md files.
+    /// </summary>
+    public IReadOnlyList<ProposalSkill>? Skills { get; init; }
 
     /// <summary>
     /// 

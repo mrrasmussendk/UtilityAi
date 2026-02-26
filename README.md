@@ -230,6 +230,15 @@ yield return ProposalHelper.For("ticket.create.priority")
 
 **Automatic Validation:** Proposals with `UsesIntentParameter` or `ScoreByIntentParameter` are automatically protected by `HasIntentParametersEligible` — they're only eligible when all declared parameters exist in the `IntentAnalysis.Parameters` dictionary. This prevents proposals from being selected when the LLM hasn't provided the required parameters.
 
+**Skill Auto-Discovery:** You can attach markdown-defined skills to a proposal using the folder convention `Module/Skills/<SkillName>/Skill.md`. Discovered skills are exposed as LLM tools automatically in `LlmCapabilityModule`, and optional `Script:` entries in `Skill.md` can be executed when the model issues tool calls.
+
+```csharp
+yield return ProposalHelper.For("support.resolve")
+    .WithDiscoveredSkills("/app/SupportModule")
+    .WithAction(ct => Task.CompletedTask)
+    .Build();
+```
+
 [See the complete Intent-Based Agent example →](./examples/Example/IntentBasedAgent/)
 
 ---
