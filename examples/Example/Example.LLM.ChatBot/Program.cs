@@ -102,7 +102,7 @@ public record AssistantMessage(string Text);
 [RequiresFact<UserMessage>]
 public class ChatBotModule : LlmCapabilityModule
 {
-    public ChatBotModule(ILlmProvider provider, string? skillId = null, string skillVersion = "latest") : base(provider, new LlmModuleConfiguration(
+    public ChatBotModule(ILlmProvider provider, string? skillId, string skillVersion) : base(provider, new LlmModuleConfiguration(
         DefaultOptions: new LlmOptions(
             Temperature: 0.7,
             MaxTokens: 500,
