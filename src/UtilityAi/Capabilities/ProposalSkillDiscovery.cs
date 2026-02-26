@@ -16,6 +16,8 @@ public sealed record ProposalSkill(
 /// </summary>
 public static class ProposalSkillDiscovery
 {
+    private const long MaxSkillFileSizeBytes = 256 * 1024;
+
     /// <summary>
     /// Discovers skills under a module directory.
     /// </summary>
@@ -73,12 +75,20 @@ public static class ProposalSkillDiscovery
 
     private static ProposalSkill? ParseSkillFile(string skillFile)
     {
-        var content = File.ReadAllText(skillFile);
+        var fileInfo = new FileInfo(skillFile);
+        if (fileInfo.Length > MaxSkillFileSizeBytes)
+            return null;
+
+        var content = File.ReadAllText(skillFile, Encoding.UTF8);
         if (string.IsNullOrWhiteSpace(content))
             return null;
 
-        var folderName = new DirectoryInfo(Path.GetDirectoryName(skillFile)!).Name;
-        var lines = content.Split('\n');
+        var directoryPath = Path.GetDirectoryName(skillFile);
+        if (string.IsNullOrWhiteSpace(directoryPath))
+            return null;
+
+        var folderName = new DirectoryInfo(directoryPath).Name;
+        var lines = content.ReplaceLineEndings("\n").Split('\n');
 
         string? name = null;
         string? script = null;
@@ -92,7 +102,8 @@ public static class ProposalSkillDiscovery
 
             if (name == null && line.StartsWith("#", StringComparison.Ordinal))
             {
-                name = line.TrimStart('#').Trim();
+                var headerText = line.TrimStart('#').Trim();
+                name = string.IsNullOrWhiteSpace(headerText) ? null : headerText;
                 continue;
             }
 
@@ -127,7 +138,10 @@ public static class ProposalSkillDiscovery
         if (Path.IsPathRooted(scriptPath))
             return scriptPath;
 
-        var skillDirectory = Path.GetDirectoryName(skillFilePath)!;
+        var skillDirectory = Path.GetDirectoryName(skillFilePath);
+        if (string.IsNullOrWhiteSpace(skillDirectory))
+            return null;
+
         return Path.GetFullPath(Path.Combine(skillDirectory, scriptPath));
     }
 }

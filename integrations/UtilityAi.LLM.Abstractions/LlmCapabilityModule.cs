@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using UtilityAi.Capabilities;
 using UtilityAi.Consideration;
 using UtilityAi.Consideration.General;
@@ -14,6 +15,12 @@ namespace UtilityAi.LLM.Abstractions;
 /// </summary>
 public abstract class LlmCapabilityModule : ICapabilityModule
 {
+    private static readonly TimeSpan ScriptExecutionTimeout = TimeSpan.FromSeconds(30);
+    private static readonly HashSet<string> AllowedScriptExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".ps1", ".py", ".sh", ".exe", ".bat", ".cmd"
+    };
+
     protected readonly ILlmProvider Provider;
     protected readonly LlmModuleConfiguration Configuration;
 
@@ -137,7 +144,11 @@ public abstract class LlmCapabilityModule : ICapabilityModule
 
     private static string ToToolName(string name)
     {
-        var cleaned = new string(name.Select(ch => char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : '_').ToArray()).Trim('_');
+        var chars = new char[name.Length];
+        for (var i = 0; i < name.Length; i++)
+            chars[i] = char.IsLetterOrDigit(name[i]) ? char.ToLowerInvariant(name[i]) : '_';
+
+        var cleaned = new string(chars).Trim('_');
         return string.IsNullOrWhiteSpace(cleaned) ? "skill_tool" : cleaned;
     }
 
@@ -167,16 +178,50 @@ public abstract class LlmCapabilityModule : ICapabilityModule
 
     private static async Task<SkillExecutionResult> ExecuteScriptAsync(ProposalSkill skill, string argumentsJson, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(skill.ScriptPath) || !File.Exists(skill.ScriptPath))
-            return new SkillExecutionResult(skill.Name, skill.ScriptPath, -1, string.Empty, "Script file not found.");
+        if (string.IsNullOrWhiteSpace(skill.ScriptPath))
+            return new SkillExecutionResult(skill.Name, skill.ScriptPath, -1, string.Empty, "Script file not configured.");
 
         var scriptPath = skill.ScriptPath;
-        var extension = Path.GetExtension(scriptPath).ToLowerInvariant();
+        if (!Path.IsPathRooted(scriptPath))
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, "Script path must be absolute.");
+
+        try
+        {
+            // Parse and dispose immediately to validate that tool arguments are valid JSON.
+            using var _ = JsonDocument.Parse(string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson);
+        }
+        catch (JsonException ex)
+        {
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, $"Invalid tool arguments JSON: {ex.Message}");
+        }
+
+        var extension = Path.GetExtension(scriptPath);
+        if (string.IsNullOrWhiteSpace(extension))
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, "Script file extension is required.");
+
+        extension = extension.ToLowerInvariant();
+        if (!AllowedScriptExtensions.Contains(extension))
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, $"Script extension '{extension}' is not allowed.");
+
+        if (!File.Exists(scriptPath))
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, "Script file not found.");
+
+        var interpreter = extension switch
+        {
+            ".ps1" => ResolveInterpreterPath(GetPreferredPowerShellPaths()),
+            ".py" => ResolveInterpreterPath(GetPreferredPythonPaths()),
+            ".sh" => ResolveInterpreterPath(GetPreferredBashPaths()),
+            _ => null
+        };
+
+        if (extension is ".ps1" or ".py" or ".sh" && interpreter == null)
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, $"No trusted interpreter found for '{extension}' scripts.");
+
         var startInfo = extension switch
         {
-            ".ps1" => new ProcessStartInfo("pwsh"),
-            ".py" => new ProcessStartInfo("python"),
-            ".sh" => new ProcessStartInfo("bash"),
+            ".ps1" => new ProcessStartInfo(interpreter!),
+            ".py" => new ProcessStartInfo(interpreter!),
+            ".sh" => new ProcessStartInfo(interpreter!),
             _ => new ProcessStartInfo(scriptPath)
         };
 
@@ -202,19 +247,74 @@ public abstract class LlmCapabilityModule : ICapabilityModule
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
 
-        using var process = new Process { StartInfo = startInfo };
-        process.Start();
+        Process? process = null;
+        try
+        {
+            process = new Process { StartInfo = startInfo };
+            process.Start();
 
-        var stdOutTask = process.StandardOutput.ReadToEndAsync(ct);
-        var stdErrTask = process.StandardError.ReadToEndAsync(ct);
-        await process.WaitForExitAsync(ct);
+            var stdOutTask = process.StandardOutput.ReadToEndAsync(ct);
+            var stdErrTask = process.StandardError.ReadToEndAsync(ct);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(ScriptExecutionTimeout);
+            await process.WaitForExitAsync(timeoutCts.Token);
 
-        return new SkillExecutionResult(
-            SkillName: skill.Name,
-            ScriptPath: scriptPath,
-            ExitCode: process.ExitCode,
-            StandardOutput: await stdOutTask,
-            StandardError: await stdErrTask);
+            return new SkillExecutionResult(
+                SkillName: skill.Name,
+                ScriptPath: scriptPath,
+                ExitCode: process.ExitCode,
+                StandardOutput: await stdOutTask,
+                StandardError: await stdErrTask);
+        }
+        catch (OperationCanceledException)
+        {
+            if (process is { HasExited: false })
+            {
+                try { process.Kill(entireProcessTree: true); }
+                catch (InvalidOperationException) { /* Best effort cleanup: process may already have exited. */ }
+            }
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, $"Script execution timed out after {ScriptExecutionTimeout.TotalSeconds:0} seconds.");
+        }
+        catch (Exception ex)
+        {
+            return new SkillExecutionResult(skill.Name, scriptPath, -1, string.Empty, $"Script execution failed: {ex.Message}");
+        }
+        finally
+        {
+            process?.Dispose();
+        }
+    }
+
+    private static string? ResolveInterpreterPath(IEnumerable<string> preferredPaths)
+    {
+        foreach (var preferredPath in preferredPaths)
+        {
+            if (File.Exists(preferredPath))
+                return preferredPath;
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> GetPreferredPowerShellPaths()
+    {
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? new[] { @"C:\Program Files\PowerShell\7\pwsh.exe", @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" }
+            : new[] { "/usr/bin/pwsh", "/usr/local/bin/pwsh" };
+    }
+
+    private static IEnumerable<string> GetPreferredPythonPaths()
+    {
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? new[] { @"C:\Python311\python.exe", @"C:\Python310\python.exe" }
+            : new[] { "/usr/bin/python3", "/usr/local/bin/python3" };
+    }
+
+    private static IEnumerable<string> GetPreferredBashPaths()
+    {
+        return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? Array.Empty<string>()
+            : new[] { "/usr/bin/bash", "/bin/bash" };
     }
 
     private static async Task<T> RetryAsync<T>(

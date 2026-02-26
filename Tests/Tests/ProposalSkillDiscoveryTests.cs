@@ -35,4 +35,21 @@ public class ProposalSkillDiscoveryTests
             Directory.Delete(moduleDir, recursive: true);
         }
     }
+
+    [Fact]
+    public void DiscoverFromModuleDirectory_WhenSkillsFolderMissing_ReturnsEmpty()
+    {
+        var moduleDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(moduleDir);
+
+        try
+        {
+            var skills = ProposalSkillDiscovery.DiscoverFromModuleDirectory(moduleDir);
+            Assert.Empty(skills);
+        }
+        finally
+        {
+            Directory.Delete(moduleDir, recursive: true);
+        }
+    }
 }
