@@ -31,4 +31,5 @@ public record LlmOptions(
     double? PresencePenalty = null,
     List<string>? StopSequences = null,
     List<LlmTool>? Tools = null,
-    string? ToolChoice = null);
+    string? ToolChoice = null,
+    OpenAiSkillsOptions? OpenAiSkills = null);

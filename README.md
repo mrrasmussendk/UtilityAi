@@ -239,6 +239,15 @@ yield return ProposalHelper.For("support.resolve")
     .Build();
 ```
 
+To mount hosted or inline OpenAI skills in the Responses API shell tool, pass `OpenAiSkills` in `LlmOptions`:
+
+```csharp
+var options = new LlmOptions(
+    OpenAiSkills: new OpenAiSkillsOptions(
+        EnvironmentType: OpenAiSkillEnvironmentType.ContainerAuto,
+        References: new[] { new OpenAiSkillReference("skill_123", "latest") }));
+```
+
 [See the complete Intent-Based Agent example →](./examples/Example/IntentBasedAgent/)
 
 ---
