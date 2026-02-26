@@ -1,7 +1,10 @@
 using OpenAI.Chat;
 using System.ClientModel;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using UtilityAi.LLM.Abstractions;
 
 namespace UtilityAi.LLM.OpenAI;
@@ -13,6 +16,8 @@ public class OpenAIProvider : ILlmProvider
 {
     private readonly ChatClient _client;
     private readonly string _model;
+    private readonly string _apiKey;
+    private static readonly HttpClient ResponsesHttpClient = new();
 
     public string ProviderName => "OpenAI";
     public string Model => _model;
@@ -29,11 +34,15 @@ public class OpenAIProvider : ILlmProvider
                    ?? throw new InvalidOperationException(
                        "OpenAI API key must be provided or set in OPENAI_API_KEY environment variable");
 
+        _apiKey = apiKey;
         _client = new ChatClient(model, new ApiKeyCredential(apiKey));
     }
 
     public async Task<LlmResponse> CompleteAsync(LlmRequest request, CancellationToken ct = default)
     {
+        if (HasOpenAiSkills(request.Options?.OpenAiSkills))
+            return await CompleteWithResponsesApiAsync(request, ct);
+
         var messages = ConvertMessages(request.Messages);
         var options = BuildOptions(request.Options);
 
@@ -45,6 +54,23 @@ public class OpenAIProvider : ILlmProvider
         LlmRequest request,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+        if (HasOpenAiSkills(request.Options?.OpenAiSkills))
+        {
+            var response = await CompleteWithResponsesApiAsync(request, ct);
+            if (!string.IsNullOrEmpty(response.Content))
+            {
+                yield return new LlmStreamChunk(
+                    Delta: response.Content,
+                    IsComplete: false);
+            }
+
+            yield return new LlmStreamChunk(
+                Delta: null,
+                IsComplete: true,
+                FinishReason: response.FinishReason);
+            yield break;
+        }
+
         var messages = ConvertMessages(request.Messages);
         var options = BuildOptions(request.Options);
 
@@ -176,5 +202,179 @@ public class OpenAIProvider : ILlmProvider
             ChatFinishReason.ContentFilter => LlmFinishReason.ContentFilter,
             _ => LlmFinishReason.Other
         };
+    }
+
+    private static bool HasOpenAiSkills(OpenAiSkillsOptions? skills)
+    {
+        if (skills == null)
+            return false;
+
+        var hasReferences = skills.References != null && skills.References.Count > 0;
+        var hasInline = skills.Inline != null && skills.Inline.Count > 0;
+        return hasReferences || hasInline;
+    }
+
+    private async Task<LlmResponse> CompleteWithResponsesApiAsync(LlmRequest request, CancellationToken ct)
+    {
+        var payload = BuildResponsesApiRequestBody(_model, request.Messages, request.Options);
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses")
+        {
+            Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json")
+        };
+        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+
+        using var response = await ResponsesHttpClient.SendAsync(httpRequest, ct);
+        var body = await response.Content.ReadAsStringAsync(ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"OpenAI responses API request failed with status {(int)response.StatusCode}: {body}",
+                null,
+                response.StatusCode);
+        }
+
+        using var json = JsonDocument.Parse(body);
+        return ConvertResponsesApiResponse(json.RootElement);
+    }
+
+    internal static JsonObject BuildResponsesApiRequestBody(string model, List<LlmMessage> messages, LlmOptions? options)
+    {
+        var payload = new JsonObject
+        {
+            ["model"] = model
+        };
+
+        var input = new JsonArray();
+        foreach (var message in messages)
+        {
+            input.Add(new JsonObject
+            {
+                ["role"] = message.Role switch
+                {
+                    LlmRole.System => "system",
+                    LlmRole.User => "user",
+                    LlmRole.Assistant => "assistant",
+                    LlmRole.Tool => "tool",
+                    _ => "user"
+                },
+                ["content"] = message.Content
+            });
+        }
+        payload["input"] = input;
+
+        if (options?.Temperature is { } temperature)
+            payload["temperature"] = temperature;
+
+        if (options?.MaxTokens is { } maxTokens)
+            payload["max_output_tokens"] = maxTokens;
+
+        var tools = new JsonArray();
+
+        if (options?.Tools != null)
+        {
+            foreach (var tool in options.Tools)
+            {
+                tools.Add(new JsonObject
+                {
+                    ["type"] = "function",
+                    ["name"] = tool.Name,
+                    ["description"] = tool.Description,
+                    ["parameters"] = JsonNode.Parse(tool.ParametersSchema.RootElement.GetRawText())
+                });
+            }
+        }
+
+        if (HasOpenAiSkills(options?.OpenAiSkills))
+        {
+            var skills = new JsonArray();
+            if (options!.OpenAiSkills!.References != null)
+            {
+                foreach (var reference in options.OpenAiSkills.References)
+                {
+                    var skillRef = new JsonObject
+                    {
+                        ["type"] = "skill_reference",
+                        ["skill_id"] = reference.SkillId
+                    };
+                    if (!string.IsNullOrWhiteSpace(reference.Version))
+                        skillRef["version"] = reference.Version;
+                    skills.Add(skillRef);
+                }
+            }
+
+            if (options!.OpenAiSkills!.Inline != null)
+            {
+                foreach (var inline in options.OpenAiSkills.Inline)
+                {
+                    skills.Add(new JsonObject
+                    {
+                        ["type"] = "inline",
+                        ["bundle"] = inline.Base64ZipBundle
+                    });
+                }
+            }
+
+            tools.Add(new JsonObject
+            {
+                ["type"] = "shell",
+                ["environment"] = new JsonObject
+                {
+                    ["type"] = options.OpenAiSkills.EnvironmentType == OpenAiSkillEnvironmentType.Local ? "local" : "container_auto",
+                    ["skills"] = skills
+                }
+            });
+        }
+
+        if (tools.Count > 0)
+            payload["tools"] = tools;
+
+        return payload;
+    }
+
+    private static LlmResponse ConvertResponsesApiResponse(JsonElement root)
+    {
+        var content = root.TryGetProperty("output_text", out var outputText)
+            ? outputText.GetString() ?? string.Empty
+            : ExtractOutputText(root);
+
+        var usage = new LlmUsage(
+            PromptTokens: TryGetInt(root, "usage", "input_tokens"),
+            CompletionTokens: TryGetInt(root, "usage", "output_tokens"),
+            TotalTokens: TryGetInt(root, "usage", "total_tokens"));
+
+        return new LlmResponse(
+            Content: content,
+            FinishReason: LlmFinishReason.Stop,
+            Usage: usage,
+            ToolCalls: null);
+    }
+
+    private static int TryGetInt(JsonElement root, string objectName, string propertyName)
+    {
+        if (!root.TryGetProperty(objectName, out var obj))
+            return 0;
+        if (!obj.TryGetProperty(propertyName, out var value))
+            return 0;
+        return value.TryGetInt32(out var result) ? result : 0;
+    }
+
+    private static string ExtractOutputText(JsonElement root)
+    {
+        if (!root.TryGetProperty("output", out var output) || output.ValueKind != JsonValueKind.Array)
+            return string.Empty;
+
+        foreach (var item in output.EnumerateArray())
+        {
+            if (!item.TryGetProperty("content", out var content) || content.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (var chunk in content.EnumerateArray())
+            {
+                if (chunk.TryGetProperty("text", out var text))
+                    return text.GetString() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
     }
 }

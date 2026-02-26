@@ -299,7 +299,8 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
                 NoRepeat: p.NoRepeat,
                 JsonOutput: p.JsonOutput,
                 IntentMatch: p.IntentMatch,
-                IntentParameters: p.IntentParameters
+                IntentParameters: p.IntentParameters,
+                Skills: p.Skills
             )).ToList();
 
             return new CapabilityInfo(moduleName, moduleTypeName, proposals);
@@ -328,7 +329,8 @@ public sealed class UtilityAiOrchestrator : IOrchestrator
                 NoRepeat: p.NoRepeat,
                 JsonOutput: p.JsonOutput,
                 IntentMatch: p.IntentMatch,
-                IntentParameters: p.IntentParameters
+                IntentParameters: p.IntentParameters,
+                Skills: p.Skills
             )).ToList();
 
             return new CapabilityInfo(moduleName, moduleTypeName, proposals);

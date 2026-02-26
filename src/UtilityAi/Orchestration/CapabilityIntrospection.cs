@@ -1,4 +1,5 @@
 using UtilityAi.Consideration.Intent;
+using UtilityAi.Capabilities;
 
 namespace UtilityAi.Orchestration;
 
@@ -25,7 +26,8 @@ public sealed record ProposalInfo(
     bool NoRepeat,
     string? JsonOutput,
     IntentMatchSpec? IntentMatch = null,
-    IReadOnlyList<IntentParameterUsage>? IntentParameters = null
+    IReadOnlyList<IntentParameterUsage>? IntentParameters = null,
+    IReadOnlyList<ProposalSkill>? Skills = null
 );
 
 /// <summary>

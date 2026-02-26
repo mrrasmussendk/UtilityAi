@@ -186,6 +186,31 @@ public class ProposalHelperTests
     }
 
     [Fact]
+    public void ProposalBuilder_WithDiscoveredSkills_AddsSkillsToProposal()
+    {
+        var moduleDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var skillDir = Path.Combine(moduleDir, "Skills", "search");
+        Directory.CreateDirectory(skillDir);
+        File.WriteAllText(Path.Combine(skillDir, "Skill.md"), "# Search\nSearch the web");
+
+        try
+        {
+            var proposal = ProposalHelper.For("with-skills")
+                .WithDiscoveredSkills(moduleDir)
+                .WithAction(_ => Task.CompletedTask)
+                .Build();
+
+            Assert.NotNull(proposal.Skills);
+            var skill = Assert.Single(proposal.Skills);
+            Assert.Equal("Search", skill.Name);
+        }
+        finally
+        {
+            Directory.Delete(moduleDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ProposalBuilderAttribute_DefaultValues()
     {
         var attr = new ProposalBuilderAttribute();

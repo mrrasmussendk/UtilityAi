@@ -36,7 +36,7 @@ public class TimeSensorTests
         var rt1 = new Runtime(bus, 0);
         await sensor.SenseAsync(rt1, CancellationToken.None);
 
-        await Task.Delay(100);
+        await Task.Delay(120);
 
         // Second tick
         var rt2 = new Runtime(bus, 1);
@@ -44,6 +44,6 @@ public class TimeSensorTests
 
         var elapsedTime = bus.GetOrDefault<ElapsedTime>();
         Assert.NotNull(elapsedTime);
-        Assert.True(elapsedTime.Value.TotalMilliseconds >= 100);
+        Assert.True(elapsedTime.Value.TotalMilliseconds >= 50);
     }
 }

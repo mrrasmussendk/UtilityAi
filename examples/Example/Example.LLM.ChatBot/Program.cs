@@ -29,13 +29,24 @@ if (string.IsNullOrEmpty(apiKey))
 Console.WriteLine("✅ API key found");
 Console.WriteLine($"📝 Model: gpt-3.5-turbo\n");
 
+var skillId = Environment.GetEnvironmentVariable("OPENAI_SKILL_ID");
+var skillVersion = Environment.GetEnvironmentVariable("OPENAI_SKILL_VERSION");
+var effectiveSkillVersion = string.IsNullOrWhiteSpace(skillVersion) ? "latest" : skillVersion;
+if (!string.IsNullOrWhiteSpace(skillId))
+{
+    Console.WriteLine($"🧰 OpenAI skill enabled: {skillId} ({effectiveSkillVersion})");
+}
+
 // ════════════════════════════════════════════════════════════════════════
 // Setup EventBus and Orchestrator
 // ════════════════════════════════════════════════════════════════════════
 
 var bus = new EventBus();
 var orchestrator = new UtilityAiOrchestrator(bus: bus)
-    .AddModule(new ChatBotModule(new OpenAIProvider("gpt-3.5-turbo", apiKey)));
+    .AddModule(new ChatBotModule(
+        new OpenAIProvider("gpt-3.5-turbo", apiKey),
+        skillId,
+        effectiveSkillVersion));
 
 // ════════════════════════════════════════════════════════════════════════
 // Chat Loop
@@ -91,8 +102,15 @@ public record AssistantMessage(string Text);
 [RequiresFact<UserMessage>]
 public class ChatBotModule : LlmCapabilityModule
 {
-    public ChatBotModule(ILlmProvider provider) : base(provider, new LlmModuleConfiguration(
-        DefaultOptions: new LlmOptions(Temperature: 0.7, MaxTokens: 500),
+    public ChatBotModule(ILlmProvider provider, string? skillId, string skillVersion) : base(provider, new LlmModuleConfiguration(
+        DefaultOptions: new LlmOptions(
+            Temperature: 0.7,
+            MaxTokens: 500,
+            OpenAiSkills: string.IsNullOrWhiteSpace(skillId)
+                ? null
+                : new OpenAiSkillsOptions(
+                    EnvironmentType: OpenAiSkillEnvironmentType.Local,
+                    References: new[] { new OpenAiSkillReference(skillId, skillVersion) })),
         OnResponseReceived: async (rt, response, ct) =>
         {
             // Publish assistant response to EventBus
