@@ -239,6 +239,13 @@ yield return ProposalHelper.For("support.resolve")
     .Build();
 ```
 
+`Skill.md` parsing rules:
+
+- The first markdown header (`# ...`) becomes the skill name (fallback: the skill folder name).
+- Non-header lines are combined into the skill description.
+- `Script: <path>` is optional and resolved relative to the skill folder when not absolute.
+- Empty files (or files above the discovery size limit) are ignored.
+
 To mount hosted or inline OpenAI skills in the Responses API shell tool, pass `OpenAiSkills` in `LlmOptions`:
 
 ```csharp
